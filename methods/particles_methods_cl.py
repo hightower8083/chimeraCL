@@ -1,7 +1,6 @@
 from pyopencl.clrandom import ThreefryGenerator
 from pyopencl.algorithm import RadixSort
 from pyopencl.array import arange, cumsum
-from pyopencl.array import cumsum
 from pyopencl import enqueue_marker, enqueue_barrier
 from pyopencl import Program
 

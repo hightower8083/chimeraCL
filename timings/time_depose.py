@@ -26,7 +26,7 @@ parts.make_parts(beam_in)
 Nint = 100
 Nheatup = 10
 parts.sort_parts()
-parts.align_parts()
+#parts.align_parts()
 
 for i in range(Nint+Nheatup):
     if i==Nheatup: t0 = time()
