@@ -1,9 +1,10 @@
-from methods.grid_methods_cl import GridMethodsCL
 from numpy import uint32, double, complex128
 from numpy import arange, pi, eye, sqrt
 from numpy.fft import fftfreq
-from scipy.special import jn_zeros, jn, j1
 from numpy.linalg import inv as inv
+from scipy.special import jn_zeros, jn, j1
+
+from .methods.grid_methods_cl import GridMethodsCL
 
 class Grid(GridMethodsCL):
     def __init__(self, configs_in, comm):

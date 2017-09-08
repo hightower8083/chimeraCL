@@ -9,16 +9,19 @@ from reikna.linalg import MatrixMul
 
 from pyfftw import empty_aligned,FFTW
 
+from chimeraCL import __path__ as src_path
+src_path = src_path[0] + '/kernels/'
+
 class GridMethodsCL(GenericMethodsCL):
     def _compile_methods(self):
         self.set_global_working_group_size()
 
         grid_sources = []
-        grid_sources.append( ''.join(open("./kernels/grid_generic.cl")\
+        grid_sources.append( ''.join(open(src_path+"grid_generic.cl")\
               .readlines()) )
 
         grid_sources.append( ''.join( \
-              open("./kernels/grid_deposit_m"+str(self.Args['M'])+".cl")\
+              open(src_path+"grid_deposit_m"+str(self.Args['M'])+".cl")\
               .readlines() ) )
 
         grid_sources = self.block_def_str + ''.join(grid_sources)
