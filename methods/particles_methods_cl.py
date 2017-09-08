@@ -1,11 +1,12 @@
 from pyopencl.clrandom import ThreefryGenerator
 from pyopencl.algorithm import RadixSort
-from pyopencl.array import empty, arange
+from pyopencl.array import arange, cumsum
 from pyopencl.array import cumsum
 from pyopencl import enqueue_marker, enqueue_barrier
 from pyopencl import Program
-from numpy import uint16, uint32,log2,ceil,int32
-from numpy import ceil
+
+from numpy import uint32, ceil
+
 from .generic_methods_cl import GenericMethodsCL
 from .generic_methods_cl import compiler_options
 
