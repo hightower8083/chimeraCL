@@ -96,11 +96,3 @@ class Particles(ParticleMethodsCL):
                                                shape=self.Args['Nxm1Nrm1'])
         self.DataDev['cell_offset'] = self.dev_arr(val=0, dtype=uint32,
                                                shape=self.Args['Nxm1Nrm1']+1)
-
-
-#    def sort_parts_step(self):
-#        self.index_and_sum()
-#        sorting_indx = self.sort_on_grid()
-#        self.align_and_damp(sorting_indx,
-#                          ['x','y','z','px','py','pz','g_inv','w'])
-

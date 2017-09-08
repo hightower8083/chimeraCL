@@ -18,7 +18,7 @@ class GridMethodsCL(GenericMethodsCL):
               .readlines()) )
 
         grid_sources.append( ''.join( \
-              open("./kernels/grid_deposit_m"+str(self.Args['M'])+"_orig.cl")\
+              open("./kernels/grid_deposit_m"+str(self.Args['M'])+".cl")\
               .readlines() ) )
 
         grid_sources = self.block_def_str + ''.join(grid_sources)
@@ -60,7 +60,8 @@ class GridMethodsCL(GenericMethodsCL):
         # Depose weights by 4-cell-grid scheme
         WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1_4'])
 
-        args_strs =  ['x','y','z',sclr,'cell_offset',
+        args_strs =  ['sort_indx','x','y','z',
+                      sclr,'cell_offset',
                       'Nx', 'Xmin', 'dx_inv',
                       'Nr', 'Rmin', 'dr_inv',
                       'Nxm1Nrm1_4']
@@ -312,51 +313,4 @@ class GridMethodsCL(GenericMethodsCL):
                 self._fft_knl(arr,arr,dir)
             else:
                 self._fft_knl(arr_out,arr,dir)
-        enqueue_barrier(self.queue)
-
-    def depose_scalar_tst(self, parts, sclr, fld):
-        # Depose weights by 4-cell-grid scheme
-        WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1_4'])
-
-        args_strs =  ['sort_indx','x','y','z',
-                      sclr,'cell_offset',
-                      'Nx', 'Xmin', 'dx_inv',
-                      'Nr', 'Rmin', 'dr_inv',
-                      'Nxm1Nrm1_4']
-
-        args_parts = [parts.DataDev[arg].data for arg in args_strs]
-        args_fld = [self.DataDev[fld+'_m'+str(m)].data \
-                    for m in range(self.Args['M']+1)]
-
-        args = args_parts + args_fld
-
-        evnt = enqueue_marker(self.queue)
-        for i_off in arange(4).astype(uint32):
-            evnt = self._depose_scalar_knl(self.queue,
-                                           (WGS_tot,),(WGS,),
-                                           i_off, *args,
-                                           wait_for = [evnt,])
-        # Correct near axis deposition
-        WGS, WGS_tot = self.get_wgs(self.Args['Nx'])
-        enqueue_barrier(self.queue)
-        self._treat_axis_dbl_knl(self.queue,
-                                 (WGS_tot,), (WGS,),
-                                 args_fld[0], self.DataDev['Nx'].data)
-
-        for m in range(1,self.Args['M']+1):
-            self._treat_axis_clx_knl(self.queue,
-                                     (WGS_tot,), (WGS,),
-                                     args_fld[m], self.DataDev['Nx'].data)
-        # Divide by radius
-        WGS, WGS_tot = self.get_wgs(self.Args['NxNr'])
-        args_strs =  ['NxNr','Nx','Rgrid_inv']
-        args = [self.DataDev[arg].data for arg in args_strs]
-
-        enqueue_barrier(self.queue)
-        self._divide_by_r_dbl_knl(self.queue,(WGS_tot,), (WGS,),
-                             args_fld[0],*args)
-
-        for m in range(1,self.Args['M']+1):
-            self._divide_by_r_clx_knl(self.queue,(WGS_tot,), (WGS,),
-                                 args_fld[m],*args)
         enqueue_barrier(self.queue)
