@@ -1,7 +1,6 @@
-from methods.particles_methods_cl import ParticleMethodsCL
-from pyopencl.clmath import sqrt
 from numpy import uint32,double
 from numpy import arange
+from .methods.particles_methods_cl import ParticleMethodsCL, sqrt
 
 class Particles(ParticleMethodsCL):
     def __init__(self, configs_in, comm=None):
@@ -42,11 +41,10 @@ class Particles(ParticleMethodsCL):
 
     def sort_parts(self):
         self.index_and_sum()
-        self.DataDev['sort_indx'] = self.sort_rdx(self.DataDev['indx_in_cell'])
+        self.sort_rdx(self.DataDev['indx_in_cell'])
 
     def align_parts(self):
-        self.align_and_damp(self.DataDev['sort_indx'],
-                            ['x','y','z','px','py','pz','g_inv','w'])
+        self.align_and_damp( ['x','y','z','px','py','pz','g_inv','w'])
 
     def _process_configs(self,configs_in):
         self.Args = configs_in

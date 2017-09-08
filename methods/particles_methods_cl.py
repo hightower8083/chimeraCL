@@ -3,11 +3,15 @@ from pyopencl.algorithm import RadixSort
 from pyopencl.array import arange, cumsum
 from pyopencl import enqueue_marker, enqueue_barrier
 from pyopencl import Program
+from pyopencl.clmath import sqrt as sqrt
 
 from numpy import uint32, ceil
 
 from .generic_methods_cl import GenericMethodsCL
 from .generic_methods_cl import compiler_options
+
+from chimeraCL import __path__ as src_path
+src_path = src_path[0] + '/kernels/'
 
 class ParticleMethodsCL(GenericMethodsCL):
     def _compile_methods(self):
@@ -21,8 +25,8 @@ class ParticleMethodsCL(GenericMethodsCL):
                     sort_arg_names=["indx_in_cell","indx_init"],
                     options=compiler_options)
 
-        particles_sources = ''.join( open("./kernels/particles_generic.cl")\
-                                     .readlines())
+        particles_sources = ''.join(
+                open(src_path+"particles_generic.cl").readlines())
 
         particles_sources = self.block_def_str + particles_sources
 
@@ -80,12 +84,13 @@ class ParticleMethodsCL(GenericMethodsCL):
         self.DataDev['cell_offset'] = self._cumsum(self.DataDev['sum_in_cell'])
 
     def sort_rdx(self, indx):
-        sorting_indx = arange(self.queue,0,indx.size,1,dtype=uint32)
-        [indx,sorting_indx], evnt = self._sort_rdx_knl(indx,sorting_indx)
+        self.DataDev['sort_indx'] = arange(self.queue, 0, indx.size, 1,
+                                           dtype=uint32)
+        [indx,self.DataDev['sort_indx']], evnt = self._sort_rdx_knl(indx,
+                                                  self.DataDev['sort_indx'])
         evnt.wait()
-        return sorting_indx
 
-    def align_and_damp(self, idx, comps):
+    def align_and_damp(self, comps):
         num_staying = self.DataDev['cell_offset'][-1].get().item()
         size_cl = self.dev_arr(val = num_staying,dtype=uint32)
 
@@ -97,13 +102,16 @@ class ParticleMethodsCL(GenericMethodsCL):
             self._data_align_dbl_knl(self.queue,
                          (WGS_tot,), (WGS,),
                          self.DataDev[comp].data, buff.data,
-                         idx.data, uint32(num_staying)).wait()
+                         self.DataDev['sort_indx'].data,
+                         uint32(num_staying)).wait()
 
             self.DataDev[comp] = buff
 
         self.DataDev['indx_in_cell'] = self.DataDev['indx_in_cell']\
                                                         [:num_staying]
         self.reset_num_parts()
+        self.DataDev['sort_indx'] = arange(self.queue, 0, self.Args['Np'], 1,
+                                           dtype=uint32)
 
     def reset_num_parts(self):
         Np = self.DataDev['x'].size
