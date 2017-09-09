@@ -1,16 +1,17 @@
+from numpy import uint32, ceil
+
 from pyopencl.clrandom import ThreefryGenerator
 from pyopencl.algorithm import RadixSort
-from pyopencl.array import arange, cumsum
+from pyopencl.array import arange, cumsum, to_device
 from pyopencl import enqueue_marker, enqueue_barrier
 from pyopencl import Program
 from pyopencl.clmath import sqrt as sqrt
-
-from numpy import uint32, ceil
 
 from .generic_methods_cl import GenericMethodsCL
 from .generic_methods_cl import compiler_options
 
 from chimeraCL import __path__ as src_path
+
 src_path = src_path[0] + '/kernels/'
 
 class ParticleMethodsCL(GenericMethodsCL):
@@ -83,12 +84,17 @@ class ParticleMethodsCL(GenericMethodsCL):
                                 *args).wait()
         self.DataDev['cell_offset'] = self._cumsum(self.DataDev['sum_in_cell'])
 
-    def sort_rdx(self, indx):
-        self.DataDev['sort_indx'] = arange(self.queue, 0, indx.size, 1,
-                                           dtype=uint32)
-        [indx,self.DataDev['sort_indx']], evnt = self._sort_rdx_knl(indx,
-                                                  self.DataDev['sort_indx'])
-        evnt.wait()
+    def index_sort(self, indx):
+        if self.comm.sort_method == 'Radix':
+            self.DataDev['sort_indx'] = arange(self.queue, 0, indx.size, 1,
+                                               dtype=uint32)
+            [indx,self.DataDev['sort_indx']], evnt = self._sort_rdx_knl(indx,
+                                                      self.DataDev['sort_indx'])
+            evnt.wait()
+        elif self.comm.sort_method == 'NumPy':
+                self.DataDev['sort_indx'] = indx.get().argsort()
+                self.DataDev['sort_indx'] = to_device(self.queue,
+                                               self.DataDev['sort_indx'])
 
     def align_and_damp(self, comps):
         num_staying = self.DataDev['cell_offset'][-1].get().item()

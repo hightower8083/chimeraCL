@@ -48,8 +48,26 @@ class Communicator:
             ctx_kw_args['interactive'] = True
 
         self.ctx = create_some_context(**ctx_kw_args)
-        self.dev_type = device_type.to_string(self.ctx.devices[0].type)
-        print("Device of {}-type is chosen".format(self.dev_type))
+        selected_dev = self.ctx.devices[0]
+        self.dev_type = device_type.to_string(selected_dev.type)
+        self.plat_name = selected_dev.platform.vendor
+
+        print("{} device is chosen on {} platform".
+              format(self.dev_type,self.plat_name))
+
+        if self.dev_type=='CPU' and self.plat_name=='Apple':
+            print('\tReikna FFT is replaced by pyFFTW')
+            self.fft_method = 'pyFFTW'
+        else:
+            self.fft_method = 'Reikna'
+
+        if self.dev_type=='CPU':
+            print('\tReikna MatrixMul is replaced by numpy.dot')
+            self.dot_method = 'NumPy'
+        else:
+            self.dot_method = 'Reikna'
+
+        self.sort_method = 'Radix'
 
         self.queue = CommandQueue(self.ctx)
 
