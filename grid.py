@@ -4,15 +4,17 @@ from numpy.fft import fftfreq
 from numpy.linalg import inv as inv
 from scipy.special import jn_zeros, jn, j1
 
-from .methods.grid_methods_cl import GridMethodsCL
+from chimeraCL.methods.grid_methods_cl import GridMethodsCL
 
 class Grid(GridMethodsCL):
     def __init__(self, configs_in, comm):
         if comm is not None:
+            self.comm = comm
             self.queue = comm.queue
             self.ctx = comm.ctx
             self.thr = comm.thr
             self.dev_type = comm.dev_type
+            self.plat_name = comm.plat_name
 
         self._process_configs(configs_in)
         self._make_spectral_axes()
@@ -20,21 +22,25 @@ class Grid(GridMethodsCL):
         self._send_grid_to_dev()
         self._compile_methods()
 
-    def depose_charge(self,particles):
+    def depose_charge(self,species = []):
         for m in range(self.Args['M']+1):
             self.set_to_zero(self.DataDev['rho_m'+str(m)],
                               self.DataDev['NxNr'])
 
-        for parts in particles:
+        for parts in species:
             self.depose_scalar(parts,'w','rho')
 
-    def depose_currents(self,particles):
+    def depose_currents(self,species = []):
         for m in range(self.Args['M']+1):
             for arg in ['Jx', 'Jy', 'Jz']:
                 self.set_to_zero(self.DataDev[arg+'_m'+str(m)],
                                  self.DataDev['NxNr'])
-        for parts in particles:
+        for parts in species:
             self.depose_vector(parts,['px','py','pz'],['g_inv','w'], 'J')
+
+    def project_fields(self,species = []):
+        for parts in species:
+            self.project_vec6(parts,['E','B'],['E','B'])
 
     def fb_transform(self, comps = [], dir=0):
         for comp in comps:

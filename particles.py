@@ -1,14 +1,17 @@
-from numpy import uint32,double
-from numpy import arange
-from .methods.particles_methods_cl import ParticleMethodsCL, sqrt
+from numpy import uint32, double, arange
+
+from chimeraCL.methods.particles_methods_cl import ParticleMethodsCL, sqrt
 
 class Particles(ParticleMethodsCL):
     def __init__(self, configs_in, comm=None):
         if comm is not None:
+            self.comm = comm
             self.queue = comm.queue
             self.ctx = comm.ctx
             self.thr = comm.thr
             self.dev_type = comm.dev_type
+            self.plat_name = comm.plat_name
+
         self._process_configs(configs_in)
         self._send_grid_to_dev()
         self._compile_methods()
@@ -41,7 +44,7 @@ class Particles(ParticleMethodsCL):
 
     def sort_parts(self):
         self.index_and_sum()
-        self.sort_rdx(self.DataDev['indx_in_cell'])
+        self.index_sort(self.DataDev['indx_in_cell'])
 
     def align_parts(self):
         self.align_and_damp( ['x','y','z','px','py','pz','g_inv','w'])

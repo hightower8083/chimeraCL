@@ -4,16 +4,17 @@ import sys
 from methods.generic_methods_cl import Communicator
 from particles import Particles
 from grid import Grid
-from copy import deepcopy
 
 def run_test(dims=(1024,256),Np=3e6,answer=2,verb=False,
              aligned=False, Nint = 100, Nheatup = 10):
+
     comm = Communicator(answers=[0,answer])
     grid_in = {'Xmin':-1.,'Xmax':1.,'Nx':dims[0],
                'Rmin':0,'Rmax':1.,'Nr':dims[1],
                'M':0}
 
     parts = Particles(grid_in,comm)
+    grid = Grid(grid_in,comm)
 
     beam_in = {'Np':int(Np),
                'x_c':0.,'Lx':0.2,
@@ -25,13 +26,14 @@ def run_test(dims=(1024,256),Np=3e6,answer=2,verb=False,
 
     parts.make_parts(beam_in)
     parts.sort_parts()
-
-    sort_indx = parts.DataDev['sort_indx'].copy()
+    if aligned:
+        parts.align_parts()
+    grid.depose_charge([parts,])
 
     for i in range(Nint+Nheatup):
         if i==Nheatup: t0 = time()
-        parts.DataDev['sort_indx'] = sort_indx
-        parts.align_parts()
+        grid.project_fields([parts,])
+
 
     comm.thr.synchronize()
     timing_avrg = (time()-t0)/Nint*1e3

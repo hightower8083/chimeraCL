@@ -1,15 +1,17 @@
-from .generic_methods_cl import GenericMethodsCL
-from .generic_methods_cl import compiler_options
-from pyopencl import Program
-from pyopencl import enqueue_marker, enqueue_barrier
 from numpy import uint32, double,complex128
 from numpy import ceil, arange
+
+from pyopencl import Program
+from pyopencl import enqueue_marker, enqueue_barrier
+
 from reikna.fft import FFT
 from reikna.linalg import MatrixMul
 
-from pyfftw import empty_aligned,FFTW
+from .generic_methods_cl import GenericMethodsCL
+from .generic_methods_cl import compiler_options
 
 from chimeraCL import __path__ as src_path
+
 src_path = src_path[0] + '/kernels/'
 
 class GridMethodsCL(GenericMethodsCL):
@@ -46,18 +48,15 @@ class GridMethodsCL(GenericMethodsCL):
 
         self._depose_scalar_knl = prg.depose_scalar
         self._depose_vector_knl = prg.depose_vector
+        self._project_scalar_knl = prg.project_scalar
+        self._project_vec6_knl = prg.project_vec6
+
+        init_array_c = self.DataDev['Ex_fb_m0'].copy()
+        self._prepare_fft(init_array_c)
 
         init_array_c = self.DataDev['Ex_fb_m0'].copy()
         init_array_d = init_array_c.real
-
-        self._prepare_fft(init_array_c)
-
-        self._dot0_knl = MatrixMul(self.DataDev['DHT_m0'],init_array_d, \
-                                out_arr=init_array_d)\
-                                .compile(self.thr,fast_math=True)
-        self._dot_knl = MatrixMul(self.DataDev['DHT_m0'], init_array_c, \
-                                out_arr=init_array_c)\
-                                .compile(self.thr,fast_math=True)
+        self._prepare_dot(init_array_d,init_array_c)
 
     def depose_scalar(self, parts, sclr, fld):
         # Depose weights by 4-cell-grid scheme
@@ -106,12 +105,33 @@ class GridMethodsCL(GenericMethodsCL):
                                  args_fld[m],*args)
         enqueue_barrier(self.queue)
 
-    def depose_vector(self, parts, vec, factors,vec_fld):
+
+    def project_scalar(self, parts, sclr, fld):
         # Depose weights by 4-cell-grid scheme
+        WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1_4'])
+
+        args_strs =  ['sort_indx',sclr,'x','y','z',
+                      'cell_offset',
+                      'Nx', 'Xmin', 'dx_inv',
+                      'Nr', 'Rmin', 'dr_inv',
+                      'Nxm1Nrm1_4']
+
+        args_parts = [parts.DataDev[arg].data for arg in args_strs]
+        args_fld = [self.DataDev[fld+'_m'+str(m)].data \
+                    for m in range(self.Args['M']+1)]
+
+        args = args_parts + args_fld
 
         evnt = enqueue_marker(self.queue)
+        for i_off in arange(4).astype(uint32):
+            evnt = self._project_scalar_knl(self.queue,
+                                           (WGS_tot,),(WGS,),
+                                           i_off, *args,
+                                           wait_for = [evnt,])
 
-        args_strs =  ['x','y','z'] + vec + factors + \
+    def depose_vector(self, parts, vec, factors,vec_fld):
+        # Depose weights by 4-cell-grid scheme
+        args_strs =  ['sort_indx','x','y','z'] + vec + factors + \
                      ['cell_offset',
                       'Nx', 'Xmin', 'dx_inv',
                       'Nr', 'Rmin', 'dr_inv',
@@ -129,40 +149,72 @@ class GridMethodsCL(GenericMethodsCL):
         args_raddiv_strs =  ['NxNr','Nx','Rgrid_inv']
         args_raddiv = [self.DataDev[arg].data for arg in args_raddiv_strs]
 
-        cell_offset = self.dev_arr(dtype=uint32)
-        for i_off in range(4):
-            cell_offset.fill(i_off)
+        WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1_4'])
+        evnt = enqueue_marker(self.queue)
+        for i_off in arange(4).astype(uint32):
             evnt = self._depose_vector_knl(self.queue,
-                                           (self.Args['Nxm1Nrm1_4'],),
-                                           None, cell_offset.data,
-                                           *args_dep, wait_for = [evnt,])
+                                          (WGS_tot,),(WGS,),
+                                          i_off, *args_dep,
+                                          wait_for = [evnt,])
+        enqueue_barrier(self.queue)
 
         for fld in [vec_fld + comp for comp in ('x','y','z')]:
+            # Correct near axis deposition
             args_fld = [self.DataDev[fld+'_m'+str(m)].data \
                          for m in range(self.Args['M']+1)]
 
-            # Correct near axis deposition
-            evnt = self._treat_axis_dbl_knl(self.queue, (self.Args['Nx'],),
-                                            None, args_fld[0],
-                                            self.DataDev['Nx'].data,
-                                            wait_for = [evnt,])
+            WGS, WGS_tot = self.get_wgs(self.Args['Nx'])
+            self._treat_axis_dbl_knl(self.queue,
+                                     (WGS_tot,), (WGS,),
+                                     args_fld[0], self.DataDev['Nx'].data)
 
             for m in range(1,self.Args['M']+1):
-               evnt = self._treat_axis_clx_knl(self.queue,(self.Args['Nx'],),
-                                               None, args_fld[m],
-                                               self.DataDev['Nx'].data,
-                                               wait_for = [evnt,])
+                self._treat_axis_clx_knl(self.queue,
+                                         (WGS_tot,), (WGS,),
+                                         args_fld[m], self.DataDev['Nx'].data)
 
             # Divide by radius
-            evnt = self._divide_by_r_dbl_knl(self.queue,(self.Args['NxNr'],),
-                                             None, args_fld[0],*args_raddiv,
-                                             wait_for = [evnt,])
+            WGS, WGS_tot = self.get_wgs(self.Args['NxNr'])
+            enqueue_barrier(self.queue)
+            self._divide_by_r_dbl_knl(self.queue,(WGS_tot,), (WGS,),
+                                 args_fld[0],*args_raddiv)
 
             for m in range(1,self.Args['M']+1):
-               evnt = self._divide_by_r_clx_knl(self.queue,
-                                                (self.Args['NxNr'],), None,
-                                                args_fld[m], *args_raddiv,
-                                                wait_for = [evnt,])
+                self._divide_by_r_clx_knl(self.queue,(WGS_tot,), (WGS,),
+                                     args_fld[m],*args_raddiv)
+            enqueue_barrier(self.queue)
+
+    def project_vec6(self, parts, vecs, flds):
+        # Depose weights by 4-cell-grid scheme
+        WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1_4'])
+
+        vecs_strs = [vecs[0] + comp for comp in ('x','y','z')] + \
+                    [vecs[1] + comp for comp in ('x','y','z')]
+
+        parts_strs =  ['sort_indx',] + vecs_strs + \
+                      ['x','y','z','cell_offset',
+                       'Nx', 'Xmin', 'dx_inv',
+                       'Nr', 'Rmin', 'dr_inv',
+                       'Nxm1Nrm1_4']
+
+        args_parts = [parts.DataDev[arg].data for arg in parts_strs]
+
+        flds_strs = [flds[0] + comp for comp in ('x','y','z')] + \
+                    [flds[1] + comp for comp in ('x','y','z')]
+
+        args_fld = []
+        for fld in flds_strs:
+            args_fld += [self.DataDev[fld+'_m'+str(m)].data \
+                         for m in range(self.Args['M']+1)]
+
+        args = args_parts + args_fld
+
+        evnt = enqueue_marker(self.queue)
+        for i_off in arange(4).astype(uint32):
+            evnt = self._project_vec6_knl(self.queue,
+                                          (WGS_tot,),(WGS,),
+                                          i_off, *args,
+                                          wait_for = [evnt,])
 
     def transform_field(self, arg,dir):
         if dir == 0:
@@ -286,9 +338,31 @@ class GridMethodsCL(GenericMethodsCL):
         self._cast_array_d2c_knl(self.queue,(WGS_tot,),(WGS,),
                              arr_in.data, arr_out.data, *args).wait()
 
+    def _prepare_dot(self, init_array_d,init_array_c):
+        if self.comm.dot_method=='Reikna':
+            self._dot0_knl = MatrixMul(self.DataDev['DHT_m0'],init_array_d, \
+                                       out_arr=init_array_d)\
+                                       .compile(self.thr,fast_math=True)
+            self._dot_knl = MatrixMul(self.DataDev['DHT_m0'], init_array_c, \
+                                      out_arr=init_array_c)\
+                                      .compile(self.thr,fast_math=True)
+        elif self.comm.dot_method=='NumPy':
+            from numpy import dot as dot_np
+            from pyopencl.array  import to_device
+
+            def dot_knl(c,a,b):
+                c = dot_np(a.get(),b.get())
+                c = to_device(self.queue,c)
+                return c
+
+            self._dot0_knl = dot_knl
+            self._dot_knl  = dot_knl
+
     def _prepare_fft(self,input_array):
         input_array = self.DataDev['Ex_fb_m0'].copy()
-        if self.dev_type == 'CPU':
+        if self.comm.fft_method=='pyFFTW':
+            from pyfftw import empty_aligned,FFTW
+
             self.arr_fft_in = empty_aligned(input_array.shape,
                         dtype=complex128, n=16)
             self.arr_fft_out = empty_aligned(input_array.shape,
@@ -299,7 +373,7 @@ class GridMethodsCL(GenericMethodsCL):
                          FFTW(input_array=self.arr_fft_in,
                               output_array=self.arr_fft_out,
                               direction = 'FFTW_BACKWARD', threads=4,axes=(1,))]
-        else:
+        elif self.comm.fft_method=='Reikna':
             fft = FFT(input_array,axes=(1,))
             self._fft_knl = fft.compile(self.thr)
 
