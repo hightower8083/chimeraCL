@@ -107,7 +107,8 @@ class GridMethodsCL(GenericMethodsCL):
 
 
     def project_scalar(self, parts, sclr, fld):
-        # Depose weights by 4-cell-grid scheme
+        # Project a scalar by 4-cell-grid scheme:
+        #   to be replaced with normal scheme
         WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1_4'])
 
         args_strs =  ['sort_indx',sclr,'x','y','z',
@@ -131,19 +132,20 @@ class GridMethodsCL(GenericMethodsCL):
 
     def depose_vector(self, parts, vec, factors,vec_fld):
         # Depose weights by 4-cell-grid scheme
-        args_strs =  ['sort_indx','x','y','z'] + vec + factors + \
+        part_strs =  ['sort_indx','x','y','z'] + vec + factors + \
                      ['cell_offset',
                       'Nx', 'Xmin', 'dx_inv',
                       'Nr', 'Rmin', 'dr_inv',
                       'Nxm1Nrm1_4']
 
-        args_parts = [parts.DataDev[arg].data for arg in args_strs]
+        args_parts = [parts.DataDev[arg].data for arg in part_strs]
 
-        args_fld = []
-        for fld in [vec_fld + comp for comp in ('x','y','z')]:
-            args_fld += [self.DataDev[fld+'_m'+str(m)].data \
-                         for m in range(self.Args['M']+1)]
+        fld_strs = []
+        for m in range(self.Args['M']+1):
+            for comp in ('x','y','z'):
+                fld_strs.append(vec_fld+comp+'_m'+str(m))
 
+        args_fld = [self.DataDev[arg].data for arg in fld_strs]
         args_dep = args_parts + args_fld
 
         args_raddiv_strs =  ['NxNr','Nx','Rgrid_inv']
@@ -185,7 +187,8 @@ class GridMethodsCL(GenericMethodsCL):
             enqueue_barrier(self.queue)
 
     def project_vec6(self, parts, vecs, flds):
-        # Depose weights by 4-cell-grid scheme
+        # Project 2 fields by 4-cell-grid scheme
+        #   to be replaced with normal scheme
         WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1_4'])
 
         vecs_strs = [vecs[0] + comp for comp in ('x','y','z')] + \

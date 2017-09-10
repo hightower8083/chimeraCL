@@ -16,6 +16,7 @@ gpu_noal_gr = []
 cpu_noal_gr = []
 cpu_al_gr = []
 
+"""
 for nump in num_ps:
     gpu_noal_np.append(run_test(answer=2,Np=nump,aligned=False,
                                 Nint=Nint,Nheatup=Nheatup))
@@ -25,10 +26,11 @@ for nump in num_ps:
                                 Nint=Nint,Nheatup=Nheatup))
     cpu_al_np.append(run_test(answer=0,Np=nump,aligned=True,
                               Nint=Nint,Nheatup=Nheatup))
+"""
 
 for grid_size in grid_sizes:
-    dims = 256*grid_size, 64*grid_size
-    nump = 2*10**6
+    dims = (2*1024,2*256) #256*grid_size, 64*grid_size
+    nump = 1*10**6
     gpu_noal_gr.append(run_test(answer=2,Np=nump,dims=dims,aligned=False,
                                 Nint=Nint,Nheatup=Nheatup))
     gpu_al_gr.append(run_test(answer=2,Np=nump,dims=dims,aligned=True,
@@ -37,6 +39,7 @@ for grid_size in grid_sizes:
                                 Nint=Nint,Nheatup=Nheatup))
     cpu_al_gr.append(run_test(answer=0,Np=nump,dims=dims,aligned=True,
                               Nint=Nint,Nheatup=Nheatup))
+
 
 print("Finished scan, making plot and saving it as 'scan_project_fields.pdf'")
 
@@ -48,9 +51,9 @@ gr_scans = [gpu_al_gr,gpu_noal_gr,cpu_noal_gr,cpu_al_gr]
 scans_legend = ['GPU pre-aligned','GPU not-aligned',
                 'CPU not-aligned','CPU pre-aligned']
 
-for i in range(4):
-    dat = np_scans[i]
-    ax_np.semilogx(num_ps,dat,'o-',c=cols[i])
+#for i in range(4):
+#    dat = np_scans[i]
+#    ax_np.semilogx(num_ps,dat,'o-',c=cols[i])
 
 for i in range(4):
     dat = gr_scans[i]

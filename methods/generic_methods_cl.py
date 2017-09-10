@@ -10,8 +10,8 @@ from pyopencl import create_some_context
 
 from reikna.cluda import ocl_api
 
-compiler_options = ['-cl-fast-relaxed-math',]
-#compiler_options = []
+#compiler_options = ['-cl-fast-relaxed-math',]
+compiler_options = []
 
 class GenericMethodsCL:
     def dev_arr(self, val=None, shape=(1,), dtype=double):
