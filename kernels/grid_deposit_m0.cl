@@ -141,7 +141,6 @@ __kernel void depose_scalar(
 //|_____|_____|_____|_____|
 //
 __kernel void project_scalar(
-           uint cell_offset,
   __global uint *sorting_indx,
   __global double *scl_proj,
   __global double *x,
@@ -154,33 +153,20 @@ __kernel void project_scalar(
   __constant uint *Nr,
   __constant double *rmin,
   __constant double *dr_inv,
-  __constant uint *Nxm1Nrm1_4,
+  __constant uint *Nxm1Nrm1,
   __global double *scl_m0)
 {
   // running kernels over the 4cells
   uint i_cell = get_global_id(0);
-  if (i_cell < *Nxm1Nrm1_4)
+  if (i_cell < *Nxm1Nrm1)
    {
     // get cell number and period of 4cell-grid
     uint Nx_grid = *Nx;
     uint Nx_cell = Nx_grid-1;
-    uint Nx_2 = Nx_cell/2;
 
     // get indicies of 4cell origin (left-bottom)
-    uint ir = i_cell/Nx_2;
-    uint ix = i_cell - ir*Nx_2;
-
-    // convert 4cell indicies to global grid
-    ix *= 2;
-    ir *= 2;
-
-    // apply offset whithin a 4cell
-    if (cell_offset==1)
-      {ix += 1;}
-    else if (cell_offset==2)
-      {ir += 1;}
-    else if (cell_offset==3)
-      {ix += 1;ir += 1;}
+    uint ir = i_cell/Nx_cell;
+    uint ix = i_cell - ir*Nx_cell;
 
     // get 1D indicies of the selected
     // cell and grid node on the global grid
@@ -408,7 +394,6 @@ __kernel void depose_vector(
 //|_____|_____|_____|_____|
 //
 __kernel void project_vec6(
-           uint cell_offset,
   __global uint *sorting_indx,
   __global double *vec_x_1_proj,
   __global double *vec_y_1_proj,
@@ -426,7 +411,7 @@ __kernel void project_vec6(
   __constant uint *Nr,
   __constant double *rmin,
   __constant double *dr_inv,
-  __constant uint *Nxm1Nrm1_4,
+  __constant uint *Nxm1Nrm1,
   __global double *vec_x_1_m0,
   __global double *vec_y_1_m0,
   __global double *vec_z_1_m0,
@@ -436,28 +421,15 @@ __kernel void project_vec6(
 {
   // running kernels over the 4cells
   uint i_cell = get_global_id(0);
-  if (i_cell < *Nxm1Nrm1_4)
+  if (i_cell < *Nxm1Nrm1)
    {
     // get cell number and period of 4cell-grid
     uint Nx_grid = *Nx;
     uint Nx_cell = Nx_grid-1;
-    uint Nx_2 = Nx_cell/2;
 
     // get indicies of 4cell origin (left-bottom)
-    uint ir = i_cell/Nx_2;
-    uint ix = i_cell - ir*Nx_2;
-
-    // convert 4cell indicies to global grid
-    ix *= 2;
-    ir *= 2;
-
-    // apply offset whithin a 4cell
-    if (cell_offset==1)
-      {ix += 1;}
-    else if (cell_offset==2)
-      {ir += 1;}
-    else if (cell_offset==3)
-      {ix += 1;ir += 1;}
+    uint ir = i_cell/Nx_cell;
+    uint ix = i_cell - ir*Nx_cell;
 
     // get 1D indicies of the selected
     // cell and grid node on the global grid

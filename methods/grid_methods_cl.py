@@ -109,26 +109,20 @@ class GridMethodsCL(GenericMethodsCL):
     def project_scalar(self, parts, sclr, fld):
         # Project a scalar by 4-cell-grid scheme:
         #   to be replaced with normal scheme
-        WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1_4'])
+        WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1'])
 
         args_strs =  ['sort_indx',sclr,'x','y','z',
                       'cell_offset',
                       'Nx', 'Xmin', 'dx_inv',
                       'Nr', 'Rmin', 'dr_inv',
-                      'Nxm1Nrm1_4']
+                      'Nxm1Nrm1']
 
         args_parts = [parts.DataDev[arg].data for arg in args_strs]
         args_fld = [self.DataDev[fld+'_m'+str(m)].data \
                     for m in range(self.Args['M']+1)]
 
         args = args_parts + args_fld
-
-        evnt = enqueue_marker(self.queue)
-        for i_off in arange(4).astype(uint32):
-            evnt = self._project_scalar_knl(self.queue,
-                                           (WGS_tot,),(WGS,),
-                                           i_off, *args,
-                                           wait_for = [evnt,])
+        evnt = self._project_scalar_knl(self.queue, (WGS_tot,),(WGS,),*args)
 
     def depose_vector(self, parts, vec, factors,vec_fld):
         # Depose weights by 4-cell-grid scheme
@@ -189,7 +183,7 @@ class GridMethodsCL(GenericMethodsCL):
     def project_vec6(self, parts, vecs, flds):
         # Project 2 fields by 4-cell-grid scheme
         #   to be replaced with normal scheme
-        WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1_4'])
+        WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1'])
 
         vecs_strs = [vecs[0] + comp for comp in ('x','y','z')] + \
                     [vecs[1] + comp for comp in ('x','y','z')]
@@ -198,7 +192,7 @@ class GridMethodsCL(GenericMethodsCL):
                       ['x','y','z','cell_offset',
                        'Nx', 'Xmin', 'dx_inv',
                        'Nr', 'Rmin', 'dr_inv',
-                       'Nxm1Nrm1_4']
+                       'Nxm1Nrm1']
 
         args_parts = [parts.DataDev[arg].data for arg in parts_strs]
 
@@ -211,13 +205,7 @@ class GridMethodsCL(GenericMethodsCL):
                          for m in range(self.Args['M']+1)]
 
         args = args_parts + args_fld
-
-        evnt = enqueue_marker(self.queue)
-        for i_off in arange(4).astype(uint32):
-            evnt = self._project_vec6_knl(self.queue,
-                                          (WGS_tot,),(WGS,),
-                                          i_off, *args,
-                                          wait_for = [evnt,])
+        evnt = self._project_vec6_knl(self.queue, (WGS_tot,),(WGS,),*args)
 
     def transform_field(self, arg,dir):
         if dir == 0:
