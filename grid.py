@@ -40,6 +40,9 @@ class Grid(GridMethodsCL):
 
     def project_fields(self,species = []):
         for parts in species:
+            for arg in ['Ex', 'Ey', 'Ez','Bx', 'By', 'Bz']:
+                self.set_to_zero(parts.DataDev[arg], parts.DataDev['Np'])
+
             self.project_vec6(parts,['E','B'],['E','B'])
 
     def fb_transform(self, comps = [], dir=0):
