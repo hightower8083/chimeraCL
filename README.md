@@ -18,11 +18,12 @@ In future work it is planed to add methods based on openMP enabled Fortran routi
 
 System requirements
 - Linux or MacOS (not tested on Windows)
-- python distribution with numpy and scipy
+- python distribution with numpy and scipy (matplotlib is also helpful)
 - <cite>[openCL]</cite> driver (tested with version 1.2 )
 - <cite>[PyOpenCL]</cite>
 - <cite>[Reikna]</cite> library
-- <cite>[pyFFTW]</cite> (Reikna's FFT crashes on Apple CPUs, cause Apple are geniuses, so it's replaced)
+- <cite>[pyFFTW]</cite> (Reikna's FFT crashes on Apple CPUs, cause Apple are geniuses, so it's replaced on these devices)
+- path to the code should be known to python (e.g. exported to PYTHONPATH)
 
 *NB*: This is a very early, non-functional version and presently it's used only for debuggin and timing of the PSATD PIC cycle piecies: deposition, projection, sorting, tranforms etc.
 
