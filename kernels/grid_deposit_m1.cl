@@ -103,10 +103,10 @@ __kernel void depose_scalar(
       exp_m1[0] = yp*rp_inv;
       exp_m1[1] = zp*rp_inv;
 
-      sX0 = ( xp - xmin_loc )*dx_inv_loc - ix;
-      sX1 = 1.0 - sX0;
-      sR0 = ( rp - rmin_loc )*dr_inv_loc - ir;
-      sR1 = 1.0 - sR0;
+      sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
+      sX0 = 1.0 - sX1;
+      sR1 = ( rp - rmin_loc )*dr_inv_loc - ir;
+      sR0 = 1.0 - sR1;
 
       sX0 *= wp;
       sX1 *= wp;
@@ -215,10 +215,10 @@ __kernel void project_scalar(
       exp_m1[0] = yp*rp_inv;
       exp_m1[1] = -zp*rp_inv;
 
-      sX0 = ( xp - xmin_loc )*dx_inv_loc - ix;
-      sX1 = 1.0 - sX0;
-      sR0 = ( rp - rmin_loc )*dr_inv_loc - ir;
-      sR1 = 1.0 - sR0;
+      sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
+      sX0 = 1.0 - sX1;
+      sR1 = ( rp - rmin_loc )*dr_inv_loc - ir;
+      sR0 = 1.0 - sR1;
 
       C_cell[0][0] = sR0*sX0;
       C_cell[0][1] = sR0*sX1;
@@ -370,10 +370,10 @@ __kernel void depose_vector(
       exp_m1[0] = yp*rp_inv;
       exp_m1[1] = zp*rp_inv;
 
-      sX0 = ( xp - xmin_loc )*dx_inv_loc - ix;
-      sX1 = 1.0 - sX0;
-      sR0 = ( rp - rmin_loc )*dr_inv_loc - ir;
-      sR1 = 1.0 - sR0;
+      sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
+      sX0 = 1.0 - sX1;
+      sR1 = ( rp - rmin_loc )*dr_inv_loc - ir;
+      sR0 = 1.0 - sR1;
 
       sX0 *= wp;
       sX1 *= wp;
@@ -533,10 +533,10 @@ __kernel void project_vec6(
       exp_m1[0] = yp*rp_inv;
       exp_m1[1] = -zp*rp_inv;
 
-      sX0 = ( xp - xmin_loc )*dx_inv_loc - ix;
-      sX1 = 1.0 - sX0;
-      sR0 = ( rp - rmin_loc )*dr_inv_loc - ir;
-      sR1 = 1.0 - sR0;
+      sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
+      sX0 = 1.0 - sX1;
+      sR1 = ( rp - rmin_loc )*dr_inv_loc - ir;
+      sR0 = 1.0 - sR1;
 
       C_cell[0][0] = sR0*sX0;
       C_cell[0][1] = sR0*sX1;
