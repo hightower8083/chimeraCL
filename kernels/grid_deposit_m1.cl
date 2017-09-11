@@ -72,14 +72,24 @@ __kernel void depose_scalar(
     // skip empty cells
     if (ip_start == ip_end) {return;}
 
+    // allocate few integer counters
+    uint i,j,t,i_dep;
+
     // allocate privite cell array for the deposition
-    double scl_cell_m0[2][2] = {{0,0},{0,0}};
-    double2 scl_cell_m1[2][2] = {{0,0},{0,0}};
+    double scl_cell_m0[2][2];
+    double scl_cell_m1[2][2][2];
+
+    for (i=0;i<2;i++){
+      for (j=0;j<2;j++){
+        scl_cell_m0[i][j] = 0;
+        scl_cell_m1[i][j][0] = 0;
+        scl_cell_m1[i][j][1] = 0;
+        }}
 
     // allocate privitely some reused variables
     double sX0, sX1, sR0, sR1;
     double C_cell[2][2];
-    double2 exp_m1 ;
+    double exp_m1[2] ;
 
     double xp, yp, zp, wp, rp, rp_inv;
     double rmin_loc = *rmin;
@@ -116,22 +126,22 @@ __kernel void depose_scalar(
       C_cell[1][0] = sR1*sX0;
       C_cell[1][1] = sR1*sX1;
 
-      for (int i=0;i<2;i++){
-        for (int j=0;j<2;j++){
+      for (i=0;i<2;i++){
+        for (j=0;j<2;j++){
           scl_cell_m0[i][j] += C_cell[i][j];
-          for (int t=0;t<2;t++){
+          for (t=0;t<2;t++){
             scl_cell_m1[i][j][t] += C_cell[i][j]*exp_m1[t];
           }}}
     }
 
     // write to the global field memory
-    for (int i=0;i<2;i++){
-      for (int j=0;j<2;j++){
-        int i_dep = i_grid_glob + j + Nx_grid*i;
+    for (i=0;i<2;i++){
+      for (j=0;j<2;j++){
+        i_dep = i_grid_glob + j + Nx_grid*i;
         scl_m0[i_dep] += scl_cell_m0[i][j];
-        for (int t=0;t<2;t++){
-          scl_m1[i_dep][t] += scl_cell_m1[i][j][t];
-        }}}
+        scl_m1[i_dep].s0 += scl_cell_m1[i][j][0];
+        scl_m1[i_dep].s1 += scl_cell_m1[i][j][1];
+        }}
   }
 }
 
@@ -177,22 +187,25 @@ __kernel void project_scalar(
     // skip empty cells
     if (ip_start == ip_end) {return;}
 
-    // allocate privite cell array for the deposition
-    double scl_cell_m0[2][2] ;
-    double2 scl_cell_m1[2][2] = {{0.,0.},{0.,0.}};
+    // allocate few integer counters
+    uint i,j,i_dep;
 
-    for (int i=0;i<2;i++){
-      for (int j=0;j<2;j++){
-        int i_dep = i_grid_glob + j + Nx_grid*i;
+    // allocate privite cell array for the deposition
+    double scl_cell_m0[2][2];
+    double scl_cell_m1[2][2][2];
+
+    for (i=0;i<2;i++){
+      for (j=0;j<2;j++){
+        i_dep = i_grid_glob + j + Nx_grid*i;
         scl_cell_m0[i][j] += scl_m0[i_dep];
-        for (int t=0;t<2;t++){
-          scl_cell_m1[i][j][t] += scl_m1[i_dep][t];
-        }}}
+        scl_cell_m1[i][j][0] += scl_m1[i_dep].s0;
+        scl_cell_m1[i][j][1] += scl_m1[i_dep].s1;
+        }}
 
     // allocate privitely some reused variables
     double sX0, sX1, sR0, sR1;
     double C_cell[2][2];
-    double2 exp_m1 ;
+    double exp_m1[2] ;
 
     double xp, yp, zp, rp, scl_proj_p, rp_inv;
     double rmin_loc = *rmin;
@@ -227,8 +240,8 @@ __kernel void project_scalar(
 
       scl_proj_p = 0;
 
-      for (int i=0;i<2;i++){
-        for (int j=0;j<2;j++){
+      for (i=0;i<2;i++){
+        for (j=0;j<2;j++){
           scl_proj_p += C_cell[i][j]*scl_cell_m0[i][j];
           scl_proj_p += C_cell[i][j]*scl_cell_m1[i][j][0]*exp_m1[0];
           scl_proj_p -= C_cell[i][j]*scl_cell_m1[i][j][1]*exp_m1[1];
@@ -319,10 +332,12 @@ __kernel void depose_vector(
     // skip empty cells
     if (ip_start == ip_end) {return;}
 
+    // allocate few integer counters
+    uint i,j,k,t,i_dep;
+
     // allocate privite cell array for the deposition
     double vec_cell_m0[3][2][2];
-    double2 vec_cell_m1[3][2][2];
-    uint i,j,k,t,i_dep;
+    double vec_cell_m1[3][2][2][2];
 
     for (k=0; k<3; k++){
       for (i=0; i<2; i++){
@@ -332,15 +347,10 @@ __kernel void depose_vector(
             vec_cell_m1[k][i][j][t] = 0.;
         }}}}
 
-//    for (k=0; k<3; k++){
-//      for (i=0; i<2; i++){
-//        for (j=0; j<2; j++){
-//        }}}}
-
     // allocate privitely some reused variables
     double sX0, sX1, sR0, sR1;
     double C_cell[2][2];
-    double2 exp_m1;
+    double exp_m1[2];
 
     double xp, yp, zp, wp,rp,rp_inv,jp_proj;
     double jp[3];
@@ -403,19 +413,19 @@ __kernel void depose_vector(
     for (i=0;i<2;i++){
       for (j=0;j<2;j++){
         i_dep = i_grid_glob + j + Nx_grid*i;
+
         vec_x_m0[i_dep] += vec_cell_m0[0][i][j];
         vec_y_m0[i_dep] += vec_cell_m0[1][i][j];
         vec_z_m0[i_dep] += vec_cell_m0[2][i][j];
-        }}
 
-    for (i=0;i<2;i++){
-      for (j=0;j<2;j++){
-        i_dep = i_grid_glob + j + Nx_grid*i;
-        for (t=0;t<2;t++){
-        vec_x_m1[i_dep][t] += vec_cell_m1[0][i][j][t];
-        vec_y_m1[i_dep][t] += vec_cell_m1[1][i][j][t];
-        vec_z_m1[i_dep][t] += vec_cell_m1[2][i][j][t];
-        }}}
+        vec_x_m1[i_dep].s0 += vec_cell_m1[0][i][j][0];
+        vec_y_m1[i_dep].s0 += vec_cell_m1[1][i][j][0];
+        vec_z_m1[i_dep].s0 += vec_cell_m1[2][i][j][0];
+
+        vec_x_m1[i_dep].s1 += vec_cell_m1[0][i][j][1];
+        vec_y_m1[i_dep].s1 += vec_cell_m1[1][i][j][1];
+        vec_z_m1[i_dep].s1 += vec_cell_m1[2][i][j][1];
+        }}
   }
 }
 
@@ -476,12 +486,14 @@ __kernel void project_vec6(
     // skip empty cells
     if (ip_start == ip_end) {return;}
 
+    // allocate few integer counters
+    uint i,j,k,t,i_dep;
+
     // allocate privite cell array for the deposition
     double vec_1_cell_m0[3][2][2] ;
     double vec_2_cell_m0[3][2][2] ;
-    double2 vec_1_cell_m1[3][2][2] ;
-    double2 vec_2_cell_m1[3][2][2] ;
-    uint i_dep, i, j, k, t;
+    double vec_1_cell_m1[3][2][2][2] ;
+    double vec_2_cell_m1[3][2][2][2] ;
 
     for (i=0;i<2;i++){
       for (j=0;j<2;j++){
@@ -494,20 +506,27 @@ __kernel void project_vec6(
         vec_2_cell_m0[1][i][j] = vec_y_2_m0[i_dep];
         vec_2_cell_m0[2][i][j] = vec_z_2_m0[i_dep];
 
-        for (t=0;t<2;t++){
-          vec_1_cell_m1[0][i][j][t] = vec_x_1_m1[i_dep][t];
-          vec_1_cell_m1[1][i][j][t] = vec_y_1_m1[i_dep][t];
-          vec_1_cell_m1[2][i][j][t] = vec_z_1_m1[i_dep][t];
+        vec_1_cell_m1[0][i][j][0] = vec_x_1_m1[i_dep].s0;
+        vec_1_cell_m1[1][i][j][0] = vec_y_1_m1[i_dep].s0;
+        vec_1_cell_m1[2][i][j][0] = vec_z_1_m1[i_dep].s0;
 
-          vec_2_cell_m1[0][i][j][t] = vec_x_2_m1[i_dep][t];
-          vec_2_cell_m1[1][i][j][t] = vec_y_2_m1[i_dep][t];
-          vec_2_cell_m1[2][i][j][t] = vec_z_2_m1[i_dep][t];
-        }}}
+        vec_2_cell_m1[0][i][j][0] = vec_x_2_m1[i_dep].s0;
+        vec_2_cell_m1[1][i][j][0] = vec_y_2_m1[i_dep].s0;
+        vec_2_cell_m1[2][i][j][0] = vec_z_2_m1[i_dep].s0;
+
+        vec_1_cell_m1[0][i][j][1] = vec_x_1_m1[i_dep].s1;
+        vec_1_cell_m1[1][i][j][1] = vec_y_1_m1[i_dep].s1;
+        vec_1_cell_m1[2][i][j][1] = vec_z_1_m1[i_dep].s1;
+
+        vec_2_cell_m1[0][i][j][1] = vec_x_2_m1[i_dep].s1;
+        vec_2_cell_m1[1][i][j][1] = vec_y_2_m1[i_dep].s1;
+        vec_2_cell_m1[2][i][j][1] = vec_z_2_m1[i_dep].s1;
+        }}
 
     // allocate privitely some reused variables
     double sX0, sX1, sR0, sR1;
     double C_cell[2][2];
-    double2 exp_m1 ;
+    double exp_m1[2] ;
 
     double vec_1_p[3];
     double vec_2_p[3];

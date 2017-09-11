@@ -52,10 +52,12 @@ class GridMethodsCL(GenericMethodsCL):
         self._project_vec6_knl = prg.project_vec6
 
         init_array_c = self.DataDev['Ex_fb_m0'].copy()
+
         self._prepare_fft(init_array_c)
 
         init_array_c = self.DataDev['Ex_fb_m0'].copy()
         init_array_d = init_array_c.real
+
         self._prepare_dot(init_array_d,init_array_c)
 
     def depose_scalar(self, parts, sclr, fld):
@@ -216,9 +218,11 @@ class GridMethodsCL(GenericMethodsCL):
             self._copy_array_to_even_grid(self.DataDev[arg_in+'0'],
                                           self.DataDev['field_fb_aux1_dbl'])
 
-            self._dot0_knl(self.DataDev['field_fb_aux2_dbl'],
-                       self.DataDev[dht_arg+'0'],
-                       self.DataDev['field_fb_aux1_dbl'])
+            self.DataDev['field_fb_aux2_dbl'] = self._dot0(
+                                        self.DataDev['field_fb_aux2_dbl'],
+                                        self.DataDev[dht_arg+'0'],
+                                        self.DataDev['field_fb_aux1_dbl'])
+
             enqueue_barrier(self.queue)
 
             self.DataDev[arg_out+'0'][:] = self.DataDev['field_fb_aux2_dbl']\
@@ -233,9 +237,9 @@ class GridMethodsCL(GenericMethodsCL):
                 self._copy_array_to_even_grid(self.DataDev[arg_in_m],
                                               self.DataDev['field_fb_aux1_clx'])
 
-                self._dot_knl(self.DataDev[arg_out_m],
-                              self.DataDev[dht_arg+str(m)],
-                              self.DataDev['field_fb_aux1_clx'])
+                self.DataDev[arg_out_m] = self._dot1(self.DataDev[arg_out_m],
+                                              self.DataDev[dht_arg+str(m)],
+                                              self.DataDev['field_fb_aux1_clx'])
                 enqueue_barrier(self.queue)
                 self._fft(self.DataDev[arg_out_m],dir=dir)
         elif dir == 1:
@@ -249,9 +253,10 @@ class GridMethodsCL(GenericMethodsCL):
             self._cast_array_c2d(self.DataDev['field_fb_aux1_clx'],
                                 self.DataDev['field_fb_aux1_dbl'])
 
-            self._dot0_knl(self.DataDev['field_fb_aux2_dbl'],
-                       self.DataDev[dht_arg+'0'],
-                       self.DataDev['field_fb_aux1_dbl'])
+            self.DataDev['field_fb_aux2_dbl'] = self._dot0(
+                                        self.DataDev['field_fb_aux2_dbl'],
+                                        self.DataDev[dht_arg+'0'],
+                                        self.DataDev['field_fb_aux1_dbl'])
             enqueue_barrier(self.queue)
 
             self._copy_array_to_odd_grid(self.DataDev['field_fb_aux2_dbl'],
@@ -265,9 +270,10 @@ class GridMethodsCL(GenericMethodsCL):
                           self.DataDev['field_fb_aux1_clx'],
                           dir=dir)
 
-                self._dot_knl(self.DataDev['field_fb_aux2_clx'],
-                              self.DataDev[dht_arg+'0'],
-                              self.DataDev['field_fb_aux1_clx'])
+                self.DataDev['field_fb_aux2_clx'] = self._dot1(
+					self.DataDev['field_fb_aux2_clx'],
+                    self.DataDev[dht_arg+'0'],
+                    self.DataDev['field_fb_aux1_clx'])
                 enqueue_barrier(self.queue)
                 self._copy_array_to_odd_grid(self.DataDev['field_fb_aux2_clx'],
                                            self.DataDev[arg_out_m])
@@ -332,22 +338,34 @@ class GridMethodsCL(GenericMethodsCL):
     def _prepare_dot(self, init_array_d,init_array_c):
         if self.comm.dot_method=='Reikna':
             self._dot0_knl = MatrixMul(self.DataDev['DHT_m0'],init_array_d, \
-                                       out_arr=init_array_d)\
+                                      out_arr=init_array_d)\
                                        .compile(self.thr,fast_math=True)
+            def dot0_wrp(c,a,b):
+                self._dot0_knl(c,a,b)
+                return c
+
             self._dot_knl = MatrixMul(self.DataDev['DHT_m0'], init_array_c, \
                                       out_arr=init_array_c)\
                                       .compile(self.thr,fast_math=True)
+            def dot1_wrp(c,a,b):
+                self._dot1_knl(c,a,b)
+                return c
+
+            self._dot0 = dot0_wrp
+            self._dot1  = dot1_wrp
+
+
         elif self.comm.dot_method=='NumPy':
             from numpy import dot as dot_np
             from pyopencl.array  import to_device
 
-            def dot_knl(c,a,b):
+            def dot_wrp(c,a,b):
                 c = dot_np(a.get(),b.get())
                 c = to_device(self.queue,c)
                 return c
 
-            self._dot0_knl = dot_knl
-            self._dot_knl  = dot_knl
+            self._dot0 = dot_wrp
+            self._dot1  = dot_wrp
 
     def _prepare_fft(self,input_array):
         input_array = self.DataDev['Ex_fb_m0'].copy()
@@ -369,7 +387,7 @@ class GridMethodsCL(GenericMethodsCL):
             self._fft_knl = fft.compile(self.thr)
 
     def _fft(self,arr, arr_out=None, dir=0):
-        if self.dev_type == 'CPU':
+        if self.comm.fft_method=='pyFFTW':
             self.arr_fft_in[:] = arr.get()
             self._fft_knl[dir]()
             if arr_out is None:

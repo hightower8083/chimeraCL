@@ -11,8 +11,8 @@ __kernel void set_cdouble_to_zero(
   uint i_cell = get_global_id(0);
   if (i_cell < *NxNr)
    {
-    rho[i_cell][0] = 0.0;
-    rho[i_cell][1] = 0.0;
+    rho[i_cell].s0 = 0.0;
+    rho[i_cell].s1 = 0.0;
    }
 }
 
@@ -44,8 +44,8 @@ __kernel void divide_by_r_clx(
    {
     uint Nx_loc = *Nx;
     uint ir = i_cell/Nx_loc ;
-    arr[i_cell][0] *= r_inv[ir];
-    arr[i_cell][1] *= r_inv[ir];
+    arr[i_cell].s0 *= r_inv[ir];
+    arr[i_cell].s1 *= r_inv[ir];
    }
 }
 
@@ -73,8 +73,8 @@ __kernel void treat_axis_clx(
    {
     uint Nx_loc = *Nx;
     uint ir = i_cell/Nx_loc;
-    arr[i_cell+Nx_loc][0] -= arr[i_cell][0];
-    arr[i_cell+Nx_loc][1] -= arr[i_cell][1];
+    arr[i_cell+Nx_loc].s0 -= arr[i_cell].s0;
+    arr[i_cell+Nx_loc].s1 -= arr[i_cell].s1;
    }
 }
 
@@ -87,7 +87,7 @@ __kernel void cast_array_d2c(
   uint i_cell = get_global_id(0);
   if (i_cell < *Nxm1Nrm1)
    {
-    arr_out[i_cell] = arr_in[i_cell][0];
+    arr_out[i_cell] = arr_in[i_cell].s0;
    }
 }
 
@@ -149,7 +149,7 @@ __kernel void copy_array_to_even_grid_d2c(
 
         uint i_cell_odd = ix + (ir+1)*Nx_grid_odd;
 
-        arr_out[i_cell_even][0] = arr_in[i_cell_odd];
+        arr_out[i_cell_even].s0 = arr_in[i_cell_odd];
     }
 }
 
@@ -180,8 +180,8 @@ __kernel void copy_array_to_even_grid_c2c(
 
         uint i_cell_odd = ix + (ir+1)*Nx_grid_odd;
 
-        arr_out[i_cell_even][2] = arr_in[i_cell_odd][0];
-        arr_out[i_cell_even][1] = arr_in[i_cell_odd][1];
+        arr_out[i_cell_even].s0 = arr_in[i_cell_odd].s0;
+        arr_out[i_cell_even].s1 = arr_in[i_cell_odd].s1;
     }
 }
 
@@ -243,7 +243,7 @@ __kernel void copy_array_to_odd_grid_d2c(
 
         uint i_cell_odd = ix + (ir+1)*Nx_grid_odd;
 
-        arr_out[i_cell_odd][0] = arr_in[i_cell_even];
+        arr_out[i_cell_odd].s0 = arr_in[i_cell_even];
     }
 }
 
@@ -274,7 +274,7 @@ __kernel void copy_array_to_odd_grid_c2c(
 
         uint i_cell_odd = ix + (ir+1)*Nx_grid_odd;
 
-        arr_out[i_cell_odd][0] = arr_in[i_cell_even][0];
-        arr_out[i_cell_odd][1] = arr_in[i_cell_even][1];
+        arr_out[i_cell_odd].s0 = arr_in[i_cell_even].s0;
+        arr_out[i_cell_odd].s1 = arr_in[i_cell_even].s1;
     }
 }
