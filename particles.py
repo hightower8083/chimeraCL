@@ -4,7 +4,9 @@ from chimeraCL.methods.particles_methods_cl import ParticleMethodsCL, sqrt
 
 class Particles(ParticleMethodsCL):
     def __init__(self, configs_in, comm=None):
+
         if comm is not None:
+            # taking some pointers from the communicator
             self.comm = comm
             self.queue = comm.queue
             self.ctx = comm.ctx
@@ -17,6 +19,8 @@ class Particles(ParticleMethodsCL):
         self._compile_methods()
 
     def make_parts(self,beam_in):
+        # make Gaussian beam (to-be-replaced by grid-population routine)
+
         Np = beam_in['Np']
         for arg in ['x','y','z','px','py','pz','g_inv','w',
                     'Ex','Ey','Ez','Bx','By','Bz']:
@@ -47,7 +51,8 @@ class Particles(ParticleMethodsCL):
         self.index_sort(self.DataDev['indx_in_cell'])
 
     def align_parts(self):
-        self.align_and_damp( ['x','y','z','px','py','pz','g_inv','w'])
+        self.align_and_damp( ['x','y','z','px','py','pz','g_inv','w'],
+                             ['indx_in_cell','Ex','Ey','Ez','Bx','By','Bz'] )
 
     def _process_configs(self,configs_in):
         self.Args = configs_in

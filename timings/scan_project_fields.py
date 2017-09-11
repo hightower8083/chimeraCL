@@ -16,7 +16,6 @@ gpu_noal_gr = []
 cpu_noal_gr = []
 cpu_al_gr = []
 
-"""
 for nump in num_ps:
     gpu_noal_np.append(run_test(answer=2,Np=nump,aligned=False,
                                 Nint=Nint,Nheatup=Nheatup))
@@ -26,10 +25,9 @@ for nump in num_ps:
                                 Nint=Nint,Nheatup=Nheatup))
     cpu_al_np.append(run_test(answer=0,Np=nump,aligned=True,
                               Nint=Nint,Nheatup=Nheatup))
-"""
 
 for grid_size in grid_sizes:
-    dims = (2*1024,2*256) #256*grid_size, 64*grid_size
+    dims = 256*grid_size, 64*grid_size #(2*1024,2*256)
     nump = 1*10**6
     gpu_noal_gr.append(run_test(answer=2,Np=nump,dims=dims,aligned=False,
                                 Nint=Nint,Nheatup=Nheatup))
@@ -51,9 +49,9 @@ gr_scans = [gpu_al_gr,gpu_noal_gr,cpu_noal_gr,cpu_al_gr]
 scans_legend = ['GPU pre-aligned','GPU not-aligned',
                 'CPU not-aligned','CPU pre-aligned']
 
-#for i in range(4):
-#    dat = np_scans[i]
-#    ax_np.semilogx(num_ps,dat,'o-',c=cols[i])
+for i in range(4):
+    dat = np_scans[i]
+    ax_np.semilogx(num_ps,dat,'o-',c=cols[i])
 
 for i in range(4):
     dat = gr_scans[i]

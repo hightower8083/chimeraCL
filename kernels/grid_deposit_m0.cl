@@ -96,10 +96,10 @@ __kernel void depose_scalar(
 
       rp = sqrt(yp*yp + zp*zp);
 
-      sX0 = ( xp - xmin_loc )*dx_inv_loc - ix;
-      sX1 = 1.0 - sX0;
-      sR0 = ( rp - rmin_loc )*dr_inv_loc - ir;
-      sR1 = 1.0 - sR0;
+      sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
+      sX0 = 1.0 - sX1;
+      sR1 = ( rp - rmin_loc )*dr_inv_loc - ir;
+      sR0 = 1.0 - sR1;
 
       sX0 *= wp;
       sX1 *= wp;
@@ -123,25 +123,8 @@ __kernel void depose_scalar(
   }
 }
 
-// Linear projection of a scalar onto 2D grid,
-// using groups of 4 cells and barrierd steps for each cell
-// in a group by calling kernel with different offsets: (0,1,2,3)
-// _______________________
-//|     |     |     |     |
-//|  2  |  3  |  2  |  3  |
-//|_____|_____|_____|_____|
-//|     |     |     |     |
-//|  0  |  1  |  0  |  1  |
-//|_____|_____|_____|_____|
-//| ____|____ |     |     |
-//|| 2  |  3 ||  2  |  3  |
-//||____|____||_____|_____|
-//||    |    ||     |     |
-//||_0__|__1_||  0  |  1  |
-//|_____|_____|_____|_____|
-//
+// Linear projection of a scalar onto 2D grid
 __kernel void project_scalar(
-           uint cell_offset,
   __global uint *sorting_indx,
   __global double *scl_proj,
   __global double *x,
@@ -154,33 +137,20 @@ __kernel void project_scalar(
   __constant uint *Nr,
   __constant double *rmin,
   __constant double *dr_inv,
-  __constant uint *Nxm1Nrm1_4,
+  __constant uint *Nxm1Nrm1,
   __global double *scl_m0)
 {
-  // running kernels over the 4cells
+  // running kernels over the cells
   uint i_cell = get_global_id(0);
-  if (i_cell < *Nxm1Nrm1_4)
+  if (i_cell < *Nxm1Nrm1)
    {
-    // get cell number and period of 4cell-grid
+    // get cell number and period of grid
     uint Nx_grid = *Nx;
     uint Nx_cell = Nx_grid-1;
-    uint Nx_2 = Nx_cell/2;
 
-    // get indicies of 4cell origin (left-bottom)
-    uint ir = i_cell/Nx_2;
-    uint ix = i_cell - ir*Nx_2;
-
-    // convert 4cell indicies to global grid
-    ix *= 2;
-    ir *= 2;
-
-    // apply offset whithin a 4cell
-    if (cell_offset==1)
-      {ix += 1;}
-    else if (cell_offset==2)
-      {ir += 1;}
-    else if (cell_offset==3)
-      {ix += 1;ir += 1;}
+    // get indicies of selected cell
+    uint ir = i_cell/Nx_cell;
+    uint ix = i_cell - ir*Nx_cell;
 
     // get 1D indicies of the selected
     // cell and grid node on the global grid
@@ -226,10 +196,10 @@ __kernel void project_scalar(
 
       scl_proj_p = 0;
 
-      sX0 = ( xp - xmin_loc )*dx_inv_loc - ix;
-      sX1 = 1.0 - sX0;
-      sR0 = ( rp - rmin_loc )*dr_inv_loc - ir;
-      sR1 = 1.0 - sR0;
+      sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
+      sX0 = 1.0 - sX1;
+      sR1 = ( rp - rmin_loc )*dr_inv_loc - ir;
+      sR0 = 1.0 - sR1;
 
       C_cell[0][0] = sR0*sX0;
       C_cell[0][1] = sR0*sX1;
@@ -358,10 +328,10 @@ __kernel void depose_vector(
 
       rp = sqrt(yp*yp + zp*zp);
 
-      sX0 = ( xp - xmin_loc )*dx_inv_loc - ix;
-      sX1 = 1.0 - sX0;
-      sR0 = ( rp - rmin_loc )*dr_inv_loc - ir;
-      sR1 = 1.0 - sR0;
+      sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
+      sX0 = 1.0 - sX1;
+      sR1 = ( rp - rmin_loc )*dr_inv_loc - ir;
+      sR0 = 1.0 - sR1;
 
       sX0 *= wp;
       sX1 *= wp;
@@ -390,25 +360,8 @@ __kernel void depose_vector(
   }
 }
 
-// Linear projection of a weighted vector of particles onto 2D grid,
-// using groups of 4 cells and barriered steps for each cell
-// in a group by calling kernel with different offsets: (0,1,2,3)
-// _______________________
-//|     |     |     |     |
-//|  2  |  3  |  2  |  3  |
-//|_____|_____|_____|_____|
-//|     |     |     |     |
-//|  0  |  1  |  0  |  1  |
-//|_____|_____|_____|_____|
-//| ____|____ |     |     |
-//|| 2  |  3 ||  2  |  3  |
-//||____|____||_____|_____|
-//||    |    ||     |     |
-//||_0__|__1_||  0  |  1  |
-//|_____|_____|_____|_____|
-//
+// Linear projection of a weighted vector of particles onto 2D grid
 __kernel void project_vec6(
-           uint cell_offset,
   __global uint *sorting_indx,
   __global double *vec_x_1_proj,
   __global double *vec_y_1_proj,
@@ -426,7 +379,7 @@ __kernel void project_vec6(
   __constant uint *Nr,
   __constant double *rmin,
   __constant double *dr_inv,
-  __constant uint *Nxm1Nrm1_4,
+  __constant uint *Nxm1Nrm1,
   __global double *vec_x_1_m0,
   __global double *vec_y_1_m0,
   __global double *vec_z_1_m0,
@@ -434,30 +387,17 @@ __kernel void project_vec6(
   __global double *vec_y_2_m0,
   __global double *vec_z_2_m0)
 {
-  // running kernels over the 4cells
+  // running kernels over the cells
   uint i_cell = get_global_id(0);
-  if (i_cell < *Nxm1Nrm1_4)
+  if (i_cell < *Nxm1Nrm1)
    {
-    // get cell number and period of 4cell-grid
+    // get cell number and period of grid
     uint Nx_grid = *Nx;
     uint Nx_cell = Nx_grid-1;
-    uint Nx_2 = Nx_cell/2;
 
-    // get indicies of 4cell origin (left-bottom)
-    uint ir = i_cell/Nx_2;
-    uint ix = i_cell - ir*Nx_2;
-
-    // convert 4cell indicies to global grid
-    ix *= 2;
-    ir *= 2;
-
-    // apply offset whithin a 4cell
-    if (cell_offset==1)
-      {ix += 1;}
-    else if (cell_offset==2)
-      {ir += 1;}
-    else if (cell_offset==3)
-      {ix += 1;ir += 1;}
+    // get indicies of cell
+    uint ir = i_cell/Nx_cell;
+    uint ix = i_cell - ir*Nx_cell;
 
     // get 1D indicies of the selected
     // cell and grid node on the global grid
@@ -516,10 +456,10 @@ __kernel void project_vec6(
         vec_2_p[k] = 0;
       }
 
-      sX0 = ( xp - xmin_loc )*dx_inv_loc - ix;
-      sX1 = 1.0 - sX0;
-      sR0 = ( rp - rmin_loc )*dr_inv_loc - ir;
-      sR1 = 1.0 - sR0;
+      sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
+      sX0 = 1.0 - sX1;
+      sR1 = ( rp - rmin_loc )*dr_inv_loc - ir;
+      sR0 = 1.0 - sR1;
 
       C_cell[0][0] = sR0*sX0;
       C_cell[0][1] = sR0*sX1;

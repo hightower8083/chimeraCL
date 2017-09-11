@@ -96,13 +96,13 @@ class ParticleMethodsCL(GenericMethodsCL):
                 self.DataDev['sort_indx'] = to_device(self.queue,
                                                self.DataDev['sort_indx'])
 
-    def align_and_damp(self, comps):
+    def align_and_damp(self, comps_align,comps_simple_dump):
         num_staying = self.DataDev['cell_offset'][-1].get().item()
         size_cl = self.dev_arr(val = num_staying,dtype=uint32)
 
         WGS, WGS_tot = self.get_wgs(num_staying)
 
-        for comp in comps:
+        for comp in comps_align:
             buff = self.dev_arr(dtype=self.DataDev[comp].dtype,
                                 shape=(num_staying,))
             self._data_align_dbl_knl(self.queue,
@@ -113,8 +113,9 @@ class ParticleMethodsCL(GenericMethodsCL):
 
             self.DataDev[comp] = buff
 
-        self.DataDev['indx_in_cell'] = self.DataDev['indx_in_cell']\
-                                                        [:num_staying]
+        for comp in comps_simple_dump:
+            self.DataDev[comp] = self.DataDev[comp][:num_staying]
+
         self.reset_num_parts()
         self.DataDev['sort_indx'] = arange(self.queue, 0, self.Args['Np'], 1,
                                            dtype=uint32)
