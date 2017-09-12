@@ -11,7 +11,7 @@ def run_test(dims=(1024,256),Np=3e6,answer=2,verb=False,
     comm = Communicator(answers=[0,answer])
     grid_in = {'Xmin':-1.,'Xmax':1.,'Nx':dims[0],
                'Rmin':0,'Rmax':1.,'Nr':dims[1],
-               'M':0}
+               'M':1}
 
     parts = Particles(grid_in,comm)
 
