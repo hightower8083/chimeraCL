@@ -6,6 +6,9 @@ Nheatup = 10
 num_ps = range(10**6,7*10**6,10**6)
 grid_sizes = range(1,9,1)
 
+answers_cpu = [0,]
+answers_gpu = None
+
 gpu_al_np = []
 gpu_noal_np = []
 cpu_noal_np = []
@@ -17,25 +20,25 @@ cpu_noal_gr = []
 cpu_al_gr = []
 
 for nump in num_ps:
-    gpu_noal_np.append(run_test(answer=2,Np=nump,aligned=False,
+    gpu_noal_np.append(run_test(answers=answers_gpu,Np=nump,aligned=False,
                                 Nint=Nint,Nheatup=Nheatup))
-    gpu_al_np.append(run_test(answer=2,Np=nump,aligned=True,
+    gpu_al_np.append(run_test(answers=answers_gpu,Np=nump,aligned=True,
                               Nint=Nint,Nheatup=Nheatup))
-    cpu_noal_np.append(run_test(answer=0,Np=nump,aligned=False,
+    cpu_noal_np.append(run_test(answers=answers_cpu,Np=nump,aligned=False,
                                 Nint=Nint,Nheatup=Nheatup))
-    cpu_al_np.append(run_test(answer=0,Np=nump,aligned=True,
+    cpu_al_np.append(run_test(answers=answers_cpu,Np=nump,aligned=True,
                               Nint=Nint,Nheatup=Nheatup))
 
 for grid_size in grid_sizes:
     dims = 256*grid_size, 64*grid_size
     nump = 2*10**6
-    gpu_noal_gr.append(run_test(answer=2,Np=nump,dims=dims,aligned=False,
+    gpu_noal_gr.append(run_test(answers=answers_gpu,Np=nump,dims=dims,aligned=False,
                                 Nint=Nint,Nheatup=Nheatup))
-    gpu_al_gr.append(run_test(answer=2,Np=nump,dims=dims,aligned=True,
+    gpu_al_gr.append(run_test(answers=answers_gpu,Np=nump,dims=dims,aligned=True,
                               Nint=Nint,Nheatup=Nheatup))
-    cpu_noal_gr.append(run_test(answer=0,Np=nump,dims=dims,aligned=False,
+    cpu_noal_gr.append(run_test(answers=answers_cpu,Np=nump,dims=dims,aligned=False,
                                 Nint=Nint,Nheatup=Nheatup))
-    cpu_al_gr.append(run_test(answer=0,Np=nump,dims=dims,aligned=True,
+    cpu_al_gr.append(run_test(answers=answers_cpu,Np=nump,dims=dims,aligned=True,
                               Nint=Nint,Nheatup=Nheatup))
 
 print("Finished scan, making plot and saving it as 'scan_project_charge.pdf'")

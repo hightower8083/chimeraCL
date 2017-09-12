@@ -1,4 +1,4 @@
-// this is a source of grid kernels for chimeraCL project
+/// this is a source of grid kernels for chimeraCL project
 
 // Depose particles "weights" onto 2D grid via linear projection,
 // using groups of 4 cells and barrierd steps for each cell
@@ -72,9 +72,19 @@ __kernel void depose_scalar(
     // skip empty cells
     if (ip_start == ip_end) {return;}
 
+    // allocate few integer counters
+    uint i,j,t,i_dep;
+
     // allocate privite cell array for the deposition
-    double scl_cell_m0[2][2] = {{0,0},{0,0}};
-    double2 scl_cell_m1[2][2] = {{0,0},{0,0}};
+    double scl_cell_m0[2][2];
+    double2 scl_cell_m1[2][2];
+
+    for (i=0;i<2;i++){
+      for (j=0;j<2;j++){
+        scl_cell_m0[i][j] = 0;
+        scl_cell_m1[i][j].s0 = 0;
+        scl_cell_m1[i][j].s1 = 0;
+        }}
 
     // allocate privitely some reused variables
     double sX0, sX1, sR0, sR1;
@@ -100,8 +110,8 @@ __kernel void depose_scalar(
       rp = sqrt(yp*yp + zp*zp);
 
       rp_inv = 1./rp;
-      exp_m1[0] = yp*rp_inv;
-      exp_m1[1] = zp*rp_inv;
+      exp_m1.s0 = yp*rp_inv;
+      exp_m1.s1 = zp*rp_inv;
 
       sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
       sX0 = 1.0 - sX1;
@@ -116,22 +126,22 @@ __kernel void depose_scalar(
       C_cell[1][0] = sR1*sX0;
       C_cell[1][1] = sR1*sX1;
 
-      for (int i=0;i<2;i++){
-        for (int j=0;j<2;j++){
+      for (i=0;i<2;i++){
+        for (j=0;j<2;j++){
           scl_cell_m0[i][j] += C_cell[i][j];
-          for (int t=0;t<2;t++){
-            scl_cell_m1[i][j][t] += C_cell[i][j]*exp_m1[t];
-          }}}
+          scl_cell_m1[i][j].s0 += C_cell[i][j]*exp_m1.s0;
+          scl_cell_m1[i][j].s1 += C_cell[i][j]*exp_m1.s1;
+          }}
     }
 
     // write to the global field memory
-    for (int i=0;i<2;i++){
-      for (int j=0;j<2;j++){
-        int i_dep = i_grid_glob + j + Nx_grid*i;
+    for (i=0;i<2;i++){
+      for (j=0;j<2;j++){
+        i_dep = i_grid_glob + j + Nx_grid*i;
         scl_m0[i_dep] += scl_cell_m0[i][j];
-        for (int t=0;t<2;t++){
-          scl_m1[i_dep][t] += scl_cell_m1[i][j][t];
-        }}}
+        scl_m1[i_dep].s0 += scl_cell_m1[i][j].s0;
+        scl_m1[i_dep].s1 += scl_cell_m1[i][j].s1;
+        }}
   }
 }
 
@@ -177,17 +187,20 @@ __kernel void project_scalar(
     // skip empty cells
     if (ip_start == ip_end) {return;}
 
-    // allocate privite cell array for the deposition
-    double scl_cell_m0[2][2] ;
-    double2 scl_cell_m1[2][2] = {{0.,0.},{0.,0.}};
+    // allocate few integer counters
+    uint i,j,i_dep;
 
-    for (int i=0;i<2;i++){
-      for (int j=0;j<2;j++){
-        int i_dep = i_grid_glob + j + Nx_grid*i;
+    // allocate privite cell array for the deposition
+    double scl_cell_m0[2][2];
+    double2 scl_cell_m1[2][2];
+
+    for (i=0;i<2;i++){
+      for (j=0;j<2;j++){
+        i_dep = i_grid_glob + j + Nx_grid*i;
         scl_cell_m0[i][j] += scl_m0[i_dep];
-        for (int t=0;t<2;t++){
-          scl_cell_m1[i][j][t] += scl_m1[i_dep][t];
-        }}}
+        scl_cell_m1[i][j].s0 += scl_m1[i_dep].s0;
+        scl_cell_m1[i][j].s1 += scl_m1[i_dep].s1;
+        }}
 
     // allocate privitely some reused variables
     double sX0, sX1, sR0, sR1;
@@ -212,8 +225,8 @@ __kernel void project_scalar(
       rp = sqrt(yp*yp + zp*zp);
 
       rp_inv = 1./rp;
-      exp_m1[0] = yp*rp_inv;
-      exp_m1[1] = -zp*rp_inv;
+      exp_m1.s0 = yp*rp_inv;
+      exp_m1.s1 = -zp*rp_inv;
 
       sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
       sX0 = 1.0 - sX1;
@@ -227,11 +240,11 @@ __kernel void project_scalar(
 
       scl_proj_p = 0;
 
-      for (int i=0;i<2;i++){
-        for (int j=0;j<2;j++){
+      for (i=0;i<2;i++){
+        for (j=0;j<2;j++){
           scl_proj_p += C_cell[i][j]*scl_cell_m0[i][j];
-          scl_proj_p += C_cell[i][j]*scl_cell_m1[i][j][0]*exp_m1[0];
-          scl_proj_p -= C_cell[i][j]*scl_cell_m1[i][j][1]*exp_m1[1];
+          scl_proj_p += C_cell[i][j]*scl_cell_m1[i][j].s0*exp_m1.s0;
+          scl_proj_p -= C_cell[i][j]*scl_cell_m1[i][j].s1*exp_m1.s1;
         }}
 
       scl_proj[ip_srtd] += scl_proj_p ;
@@ -319,23 +332,25 @@ __kernel void depose_vector(
     // skip empty cells
     if (ip_start == ip_end) {return;}
 
+    // allocate few integer counters
+    uint i,j,k,t,i_dep;
+
     // allocate privite cell array for the deposition
     double vec_cell_m0[3][2][2];
     double2 vec_cell_m1[3][2][2];
-    uint i,j,k,t,i_dep;
 
     for (k=0; k<3; k++){
       for (i=0; i<2; i++){
         for (j=0; j<2; j++){
           vec_cell_m0[k][i][j] = 0.;
-          for (t=0;t<2;t++){
-            vec_cell_m1[k][i][j][t] = 0.;
-        }}}}
+        }}}
 
-//    for (k=0; k<3; k++){
-//      for (i=0; i<2; i++){
-//        for (j=0; j<2; j++){
-//        }}}}
+    for (k=0; k<3; k++){
+      for (i=0; i<2; i++){
+        for (j=0; j<2; j++){
+          vec_cell_m1[k][i][j].s0 = 0.;
+          vec_cell_m1[k][i][j].s1 = 0.;
+        }}}
 
     // allocate privitely some reused variables
     double sX0, sX1, sR0, sR1;
@@ -367,8 +382,8 @@ __kernel void depose_vector(
       rp_inv = 0;
       if (rp>0){rp_inv = 1./rp;}
 
-      exp_m1[0] = yp*rp_inv;
-      exp_m1[1] = zp*rp_inv;
+      exp_m1.s0 = yp*rp_inv;
+      exp_m1.s1 = zp*rp_inv;
 
       sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
       sX0 = 1.0 - sX1;
@@ -386,18 +401,12 @@ __kernel void depose_vector(
       for (k=0;k<3;k++){
         for (i=0;i<2;i++){
           for (j=0;j<2;j++){
-            vec_cell_m0[k][i][j] += C_cell[i][j]*jp[k];
-          }}}
-
-      for (k=0;k<3;k++){
-        for (i=0;i<2;i++){
-          for (j=0;j<2;j++){
             jp_proj = C_cell[i][j]*jp[k];
-            for (t=0;t<2;t++){
-              vec_cell_m1[k][i][j][t] += jp_proj*exp_m1[t];
-          }}}}
-     }
-
+            vec_cell_m0[k][i][j] += C_cell[i][j]*jp[k];
+            vec_cell_m1[k][i][j].s0 += jp_proj*exp_m1.s0;
+            vec_cell_m1[k][i][j].s1 += jp_proj*exp_m1.s1;
+          }}}
+   }
     // write to the global field memory
 
     for (i=0;i<2;i++){
@@ -406,16 +415,13 @@ __kernel void depose_vector(
         vec_x_m0[i_dep] += vec_cell_m0[0][i][j];
         vec_y_m0[i_dep] += vec_cell_m0[1][i][j];
         vec_z_m0[i_dep] += vec_cell_m0[2][i][j];
+        vec_x_m1[i_dep].s0 += vec_cell_m1[0][i][j].s0;
+        vec_x_m1[i_dep].s1 += vec_cell_m1[0][i][j].s1;
+        vec_y_m1[i_dep].s0 += vec_cell_m1[1][i][j].s0;
+        vec_y_m1[i_dep].s1 += vec_cell_m1[1][i][j].s1;
+        vec_z_m1[i_dep].s0 += vec_cell_m1[2][i][j].s0;
+        vec_z_m1[i_dep].s1 += vec_cell_m1[2][i][j].s1;
         }}
-
-    for (i=0;i<2;i++){
-      for (j=0;j<2;j++){
-        i_dep = i_grid_glob + j + Nx_grid*i;
-        for (t=0;t<2;t++){
-        vec_x_m1[i_dep][t] += vec_cell_m1[0][i][j][t];
-        vec_y_m1[i_dep][t] += vec_cell_m1[1][i][j][t];
-        vec_z_m1[i_dep][t] += vec_cell_m1[2][i][j][t];
-        }}}
   }
 }
 
@@ -476,12 +482,14 @@ __kernel void project_vec6(
     // skip empty cells
     if (ip_start == ip_end) {return;}
 
+    // allocate few integer counters
+    uint i,j,k,t,i_dep;
+
     // allocate privite cell array for the deposition
     double vec_1_cell_m0[3][2][2] ;
     double vec_2_cell_m0[3][2][2] ;
     double2 vec_1_cell_m1[3][2][2] ;
     double2 vec_2_cell_m1[3][2][2] ;
-    uint i_dep, i, j, k, t;
 
     for (i=0;i<2;i++){
       for (j=0;j<2;j++){
@@ -494,15 +502,24 @@ __kernel void project_vec6(
         vec_2_cell_m0[1][i][j] = vec_y_2_m0[i_dep];
         vec_2_cell_m0[2][i][j] = vec_z_2_m0[i_dep];
 
-        for (t=0;t<2;t++){
-          vec_1_cell_m1[0][i][j][t] = vec_x_1_m1[i_dep][t];
-          vec_1_cell_m1[1][i][j][t] = vec_y_1_m1[i_dep][t];
-          vec_1_cell_m1[2][i][j][t] = vec_z_1_m1[i_dep][t];
+        vec_1_cell_m1[0][i][j].s0 = vec_x_1_m1[i_dep].s0;
+        vec_1_cell_m1[0][i][j].s1 = vec_x_1_m1[i_dep].s1;
 
-          vec_2_cell_m1[0][i][j][t] = vec_x_2_m1[i_dep][t];
-          vec_2_cell_m1[1][i][j][t] = vec_y_2_m1[i_dep][t];
-          vec_2_cell_m1[2][i][j][t] = vec_z_2_m1[i_dep][t];
-        }}}
+        vec_1_cell_m1[1][i][j].s0 = vec_y_1_m1[i_dep].s0;
+        vec_1_cell_m1[1][i][j].s1 = vec_y_1_m1[i_dep].s1;
+
+        vec_1_cell_m1[2][i][j].s0 = vec_z_1_m1[i_dep].s0;
+        vec_1_cell_m1[2][i][j].s1 = vec_z_1_m1[i_dep].s1;
+
+        vec_2_cell_m1[0][i][j].s0 = vec_x_2_m1[i_dep].s0;
+        vec_2_cell_m1[0][i][j].s1 = vec_x_2_m1[i_dep].s1;
+
+        vec_2_cell_m1[1][i][j].s0 = vec_y_2_m1[i_dep].s0;
+        vec_2_cell_m1[1][i][j].s1 = vec_y_2_m1[i_dep].s1;
+
+        vec_2_cell_m1[2][i][j].s0 = vec_z_2_m1[i_dep].s0;
+        vec_2_cell_m1[2][i][j].s1 = vec_z_2_m1[i_dep].s1;
+        }}
 
     // allocate privitely some reused variables
     double sX0, sX1, sR0, sR1;
@@ -530,8 +547,8 @@ __kernel void project_vec6(
       rp = sqrt(yp*yp + zp*zp);
 
       rp_inv = 1./rp;
-      exp_m1[0] = yp*rp_inv;
-      exp_m1[1] = -zp*rp_inv;
+      exp_m1.s0 = yp*rp_inv;
+      exp_m1.s1 = -zp*rp_inv;
 
       sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
       sX0 = 1.0 - sX1;
@@ -552,36 +569,11 @@ __kernel void project_vec6(
         for (i=0;i<2;i++){
           for (j=0;j<2;j++){
             vec_1_p[k] += C_cell[i][j]*vec_1_cell_m0[k][i][j];
-          }}}
-
-      for (k=0;k<3;k++){
-        for (i=0;i<2;i++){
-          for (j=0;j<2;j++){
             vec_2_p[k] += C_cell[i][j]*vec_2_cell_m0[k][i][j];
-          }}}
-
-      for (k=0;k<3;k++){
-        for (i=0;i<2;i++){
-          for (j=0;j<2;j++){
-            vec_1_p[k] += C_cell[i][j]*vec_1_cell_m1[k][i][j][0]*exp_m1[0];
-          }}}
-
-      for (k=0;k<3;k++){
-        for (i=0;i<2;i++){
-          for (j=0;j<2;j++){
-            vec_1_p[k] -= C_cell[i][j]*vec_1_cell_m1[k][i][j][1]*exp_m1[1];
-          }}}
-
-      for (k=0;k<3;k++){
-        for (i=0;i<2;i++){
-          for (j=0;j<2;j++){
-            vec_2_p[k] += C_cell[i][j]*vec_2_cell_m1[k][i][j][0]*exp_m1[0];
-          }}}
-
-      for (k=0;k<3;k++){
-        for (i=0;i<2;i++){
-          for (j=0;j<2;j++){
-            vec_2_p[k] -= C_cell[i][j]*vec_2_cell_m1[k][i][j][1]*exp_m1[1];
+            vec_1_p[k] += C_cell[i][j]*vec_1_cell_m1[k][i][j].s0*exp_m1.s0;
+            vec_1_p[k] -= C_cell[i][j]*vec_1_cell_m1[k][i][j].s1*exp_m1.s1;
+            vec_2_p[k] += C_cell[i][j]*vec_2_cell_m1[k][i][j].s0*exp_m1.s0;
+            vec_2_p[k] -= C_cell[i][j]*vec_2_cell_m1[k][i][j].s1*exp_m1.s1;
           }}}
 
       vec_x_1_proj[ip_srtd] += vec_1_p[0] ;

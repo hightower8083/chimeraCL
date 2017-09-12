@@ -5,13 +5,16 @@ from methods.generic_methods_cl import Communicator
 from particles import Particles
 from grid import Grid
 
-def run_test(dims=(1024,256),Np=3e6,answer=2,verb=False,
+def run_test(dims=(1024,256),Np=3e6,answers=[0,2],verb=False,
              aligned=False, Nint = 100, Nheatup = 10):
 
-    comm = Communicator(answers=[0,answer])
+    if answers is None:
+        return 0
+
+    comm = Communicator(answers=answers)
     grid_in = {'Xmin':-1.,'Xmax':1.,'Nx':dims[0],
                'Rmin':0,'Rmax':1.,'Nr':dims[1],
-               'M':0}
+               'M':1}
 
     parts = Particles(grid_in,comm)
     grid = Grid(grid_in,comm)
@@ -44,4 +47,8 @@ def run_test(dims=(1024,256),Np=3e6,answer=2,verb=False,
     return timing_avrg
 
 if __name__ == "__main__":
-    run_test(answer=int(sys.argv[-1]),verb=True)
+    conv_to_list = lambda str_var: list(array( str_var.split(':')).\
+                                          astype(int32))
+
+    run_test(answers=conv_to_list(sys.argv[-1]),verb=True)
+
