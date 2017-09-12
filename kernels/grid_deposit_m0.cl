@@ -36,12 +36,14 @@ __kernel void depose_scalar(
 {
   // running kernels over the 4cells
   uint i_cell = get_global_id(0);
-  if (i_cell < *Nxm1Nrm1_4)
+if (i_cell < *Nxm1Nrm1_4)
    {
     // get cell number and period of 4cell-grid
     uint Nx_grid = *Nx;
     uint Nx_cell = Nx_grid-1;
     uint Nx_2 = Nx_cell/2;
+
+    uint Nr_cell = *Nr-1;
 
     // get indicies of 4cell origin (left-bottom)
     uint ir = i_cell/Nx_2;
@@ -59,6 +61,8 @@ __kernel void depose_scalar(
     else if (cell_offset==3)
       {ix += 1;ir += 1;}
 
+if (ix<Nx_cell && ir<Nr_cell ){
+
     // get 1D indicies of the selected
     // cell and grid node on the global grid
     uint i_cell_glob = ix + ir*Nx_cell;
@@ -69,7 +73,7 @@ __kernel void depose_scalar(
     uint ip_end = indx_offset[i_cell_glob+1];
 
     // skip empty cells
-    if (ip_start == ip_end) {return;}
+if (ip_start != ip_end) {
 
     // allocate privite cell array for the deposition
     double scl_cell_m0[2][2] = {{0.,0.},{0.,0.}};
@@ -121,7 +125,7 @@ __kernel void depose_scalar(
         scl_m0[i_dep] += scl_cell_m0[i][j];
       }}
   }
-}
+}}}
 
 // Linear projection of a scalar onto 2D grid
 __kernel void project_scalar(

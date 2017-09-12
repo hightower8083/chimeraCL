@@ -222,7 +222,6 @@ class GridMethodsCL(GenericMethodsCL):
                                         self.DataDev['field_fb_aux2_dbl'],
                                         self.DataDev[dht_arg+'0'],
                                         self.DataDev['field_fb_aux1_dbl'])
-
             enqueue_barrier(self.queue)
 
             self.DataDev[arg_out+'0'][:] = self.DataDev['field_fb_aux2_dbl']\
@@ -257,6 +256,7 @@ class GridMethodsCL(GenericMethodsCL):
                                         self.DataDev['field_fb_aux2_dbl'],
                                         self.DataDev[dht_arg+'0'],
                                         self.DataDev['field_fb_aux1_dbl'])
+
             enqueue_barrier(self.queue)
 
             self._copy_array_to_odd_grid(self.DataDev['field_fb_aux2_dbl'],
@@ -266,14 +266,15 @@ class GridMethodsCL(GenericMethodsCL):
 
                 arg_in_m = arg_in + str(m)
                 arg_out_m = arg_out + str(m)
-                self._fft( self.DataDev[arg_in_m],
-                          self.DataDev['field_fb_aux1_clx'],
+                self._fft(self.DataDev[arg_in_m],
+                          arr_out=self.DataDev['field_fb_aux1_clx'],
                           dir=dir)
 
                 self.DataDev['field_fb_aux2_clx'] = self._dot1(
 					self.DataDev['field_fb_aux2_clx'],
                     self.DataDev[dht_arg+'0'],
                     self.DataDev['field_fb_aux1_clx'])
+
                 enqueue_barrier(self.queue)
                 self._copy_array_to_odd_grid(self.DataDev['field_fb_aux2_clx'],
                                            self.DataDev[arg_out_m])
