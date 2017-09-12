@@ -103,7 +103,7 @@ class ParticleMethodsCL(GenericMethodsCL):
 
     def align_and_damp(self, comps_align,comps_simple_dump):
         num_staying = self.DataDev['cell_offset'][-1].get().item()
-        size_cl = self.dev_arr(val = num_staying,dtype=uint32)
+        #size_cl = self.dev_arr(val = num_staying,dtype=uint32)
 
         WGS, WGS_tot = self.get_wgs(num_staying)
 
