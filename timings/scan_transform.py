@@ -5,15 +5,18 @@ Nint = 10
 Nheatup = 30
 grid_sizes = range(1,11,1)
 
+answers_cpu = [0,]
+answers_gpu = None
+
 gpu_noal_gr = []
 cpu_noal_gr = []
 
 for grid_size in grid_sizes:
     dims = 256*grid_size, 64*grid_size
     nump = 2*10**6
-    gpu_noal_gr.append(run_test(answer=2,Np=nump,dims=dims,aligned=False,
+    gpu_noal_gr.append(run_test(answers=answers_gpu,Np=nump,dims=dims,aligned=False,
                                 Nint=Nint,Nheatup=Nheatup))
-    cpu_noal_gr.append(run_test(answer=0,Np=nump,dims=dims,aligned=False,
+    cpu_noal_gr.append(run_test(answers=answers_cpu,Np=nump,dims=dims,aligned=False,
                                 Nint=Nint,Nheatup=Nheatup))
 
 print("Finished scan, making plot and saving it as 'scan_transform.pdf'")

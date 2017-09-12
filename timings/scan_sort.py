@@ -5,13 +5,16 @@ num_ps = range(10**6,7*10**6,10**6)
 Nint = 20
 Nheatup = 5
 
+answers_cpu = [0,]
+answers_gpu = None
+
 gpu_noal_np = []
 cpu_noal_np = []
 
 for nump in num_ps:
-    gpu_noal_np.append(run_test(answer=2,Np=nump,aligned=False,
+    gpu_noal_np.append(run_test(answers=answers_gpu,Np=nump,aligned=False,
                                 Nint=Nint, Nheatup=Nheatup))
-    cpu_noal_np.append(run_test(answer=0,Np=nump,aligned=False,
+    cpu_noal_np.append(run_test(answers=answers_cpu,Np=nump,aligned=False,
                                 Nint=Nint, Nheatup=Nheatup))
 
 print("Finished scan, making plot and saving it as 'scan_sort.pdf'")

@@ -225,8 +225,8 @@ __kernel void project_scalar(
       rp = sqrt(yp*yp + zp*zp);
 
       rp_inv = 1./rp;
-      exp_m1[0] = yp*rp_inv;
-      exp_m1[1] = -zp*rp_inv;
+      exp_m1.s0 = yp*rp_inv;
+      exp_m1.s1 = -zp*rp_inv;
 
       sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
       sX0 = 1.0 - sX1;
@@ -243,8 +243,8 @@ __kernel void project_scalar(
       for (i=0;i<2;i++){
         for (j=0;j<2;j++){
           scl_proj_p += C_cell[i][j]*scl_cell_m0[i][j];
-          scl_proj_p += C_cell[i][j]*scl_cell_m1[i][j][0]*exp_m1.s0;
-          scl_proj_p -= C_cell[i][j]*scl_cell_m1[i][j][1]*exp_m1.s1;
+          scl_proj_p += C_cell[i][j]*scl_cell_m1[i][j].s0*exp_m1.s0;
+          scl_proj_p -= C_cell[i][j]*scl_cell_m1[i][j].s1*exp_m1.s1;
         }}
 
       scl_proj[ip_srtd] += scl_proj_p ;
