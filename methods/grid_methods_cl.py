@@ -64,17 +64,18 @@ class GridMethodsCL(GenericMethodsCL):
         # Depose weights by 4-cell-grid scheme
         WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1_4'])
 
-        args_strs =  ['sort_indx','x','y','z',
-                      sclr,'cell_offset',
-                      'Nx', 'Xmin', 'dx_inv',
-                      'Nr', 'Rmin', 'dr_inv',
-                      'Nxm1Nrm1_4']
+        part_strs = ['sort_indx','x','y','z',
+                     sclr,'cell_offset',]
+        grid_strs = ['Nx', 'Xmin', 'dx_inv',
+                     'Nr', 'Rmin', 'dr_inv',
+                     'Nxm1Nrm1_4']
 
-        args_parts = [parts.DataDev[arg].data for arg in args_strs]
-        args_fld = [self.DataDev[fld+'_m'+str(m)].data \
-                    for m in range(self.Args['M']+1)]
+        args_parts = [parts.DataDev[arg].data for arg in part_strs]
+        args_grid = [self.DataDev[arg].data for arg in grid_strs] + \
+                                        [self.DataDev[fld+'_m'+str(m)].data \
+                                         for m in range(self.Args['M']+1)]
 
-        args = args_parts + args_fld
+        args = args_parts + args_grid
 
         evnt = enqueue_marker(self.queue)
         for i_off in arange(4).astype(uint32):
@@ -82,17 +83,21 @@ class GridMethodsCL(GenericMethodsCL):
                                            (WGS_tot,),(WGS,),
                                            i_off, *args,
                                            wait_for = [evnt,])
+
         # Correct near axis deposition
+        args_grid = [self.DataDev[fld+'_m'+str(m)].data \
+                     for m in range(self.Args['M']+1)]
+
         WGS, WGS_tot = self.get_wgs(self.Args['Nx'])
         enqueue_barrier(self.queue)
         self._treat_axis_dbl_knl(self.queue,
                                  (WGS_tot,), (WGS,),
-                                 args_fld[0], self.DataDev['Nx'].data)
+                                 args_grid[0], self.DataDev['Nx'].data)
 
         for m in range(1,self.Args['M']+1):
             self._treat_axis_clx_knl(self.queue,
                                      (WGS_tot,), (WGS,),
-                                     args_fld[m], self.DataDev['Nx'].data)
+                                     args_grid[m], self.DataDev['Nx'].data)
         # Divide by radius
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr'])
         args_strs =  ['NxNr','Nx','Rgrid_inv']
@@ -100,11 +105,11 @@ class GridMethodsCL(GenericMethodsCL):
 
         enqueue_barrier(self.queue)
         self._divide_by_r_dbl_knl(self.queue,(WGS_tot,), (WGS,),
-                             args_fld[0],*args)
+                             args_grid[0],*args)
 
         for m in range(1,self.Args['M']+1):
             self._divide_by_r_clx_knl(self.queue,(WGS_tot,), (WGS,),
-                                 args_fld[m],*args)
+                                 args_grid[m],*args)
         enqueue_barrier(self.queue)
 
 
@@ -128,21 +133,24 @@ class GridMethodsCL(GenericMethodsCL):
 
     def depose_vector(self, parts, vec, factors,vec_fld):
         # Depose weights by 4-cell-grid scheme
+
         part_strs =  ['sort_indx','x','y','z'] + vec + factors + \
-                     ['cell_offset',
-                      'Nx', 'Xmin', 'dx_inv',
-                      'Nr', 'Rmin', 'dr_inv',
-                      'Nxm1Nrm1_4']
+                     ['cell_offset']
 
-        args_parts = [parts.DataDev[arg].data for arg in part_strs]
-
+        grid_strs = ['Nx', 'Xmin', 'dx_inv',
+                     'Nr', 'Rmin', 'dr_inv',
+                     'Nxm1Nrm1_4']
         fld_strs = []
+
         for m in range(self.Args['M']+1):
             for comp in ('x','y','z'):
                 fld_strs.append(vec_fld+comp+'_m'+str(m))
 
+        args_parts = [parts.DataDev[arg].data for arg in part_strs]
+        args_grid = [self.DataDev[arg].data for arg in grid_strs]
         args_fld = [self.DataDev[arg].data for arg in fld_strs]
-        args_dep = args_parts + args_fld
+
+        args_dep = args_parts + args_grid + args_fld
 
         args_raddiv_strs =  ['NxNr','Nx','Rgrid_inv']
         args_raddiv = [self.DataDev[arg].data for arg in args_raddiv_strs]

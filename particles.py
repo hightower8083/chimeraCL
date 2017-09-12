@@ -46,9 +46,9 @@ class Particles(ParticleMethodsCL):
                                                     shape=Np)
         self.reset_num_parts()
 
-    def sort_parts(self):
-        self.index_and_sum()
-        self.index_sort(self.DataDev['indx_in_cell'])
+    def sort_parts(self,grid):
+        self.index_and_sum(grid)
+        self.index_sort()
 
     def align_parts(self):
         self.align_and_damp( ['x','y','z','px','py','pz','g_inv','w'],
@@ -58,6 +58,7 @@ class Particles(ParticleMethodsCL):
         self.Args = configs_in
         self.Args['Np'] = 0
 
+        """
         if (self.Args['Nx']//2)*2 == self.Args['Nx']:
             self.Args['Nx'] += 1
         if (self.Args['Nr']//2)*2 == self.Args['Nr']:
@@ -78,29 +79,17 @@ class Particles(ParticleMethodsCL):
         self.Args['Rgrid'] = self.Args['Rmin'] + \
                              self.Args['dr']*arange(self.Args['Nr'])
 
+        """
         if 'dt' not in self.Args:
-            self.Args['dt'] = self.Args['dx']
+            self.Args['dt'] = 1.
         self.Args['dt_2'] = 0.5*self.Args['dt']
         self.Args['dt_inv'] = 1.0/self.Args['dt']
 
-        self.Args['NxNr'] = self.Args['Nr']*self.Args['Nx']
-        self.Args['Nxm1Nrm1'] = (self.Args['Nr']-1)*(self.Args['Nx']-1)
-        self.Args['Nxm1Nrm1_4'] = self.Args['Nxm1Nrm1']//4
-
     def _send_grid_to_dev(self):
         self.DataDev = {}
-        args_int_imprt = ['Nx','Nr','Np','NxNr','Nxm1Nrm1','Nxm1Nrm1_4']
-        args_dbl_imprt = ['Xmin','Xmax','dx','dx_inv',
-                          'Rmin','Rmax','dr','dr_inv',
-                          'dt_2','dt_inv']
 
-        for arg in args_int_imprt:
+        for arg in ['Np',]:
             self.DataDev[arg] = self.dev_arr(val=self.Args[arg], dtype=uint32)
 
-        for arg in args_dbl_imprt:
+        for arg in ['dt_2','dt_inv']:
             self.DataDev[arg] = self.dev_arr(val=self.Args[arg], dtype=double)
-
-        self.DataDev['sum_in_cell'] = self.dev_arr(val=0, dtype=uint32,
-                                               shape=self.Args['Nxm1Nrm1'])
-        self.DataDev['cell_offset'] = self.dev_arr(val=0, dtype=uint32,
-                                               shape=self.Args['Nxm1Nrm1']+1)

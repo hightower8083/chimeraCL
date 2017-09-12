@@ -51,10 +51,12 @@ class Grid(GridMethodsCL):
 
     def _process_configs(self,configs_in):
         self.Args = configs_in
+#        """
         if (self.Args['Nx']//2)*2 == self.Args['Nx']:
             self.Args['Nx'] += 1
         if (self.Args['Nr']//2)*2 == self.Args['Nr']:
             self.Args['Nr'] += 1
+#        """
         if 'M' not in self.Args:
             self.Args['M'] = 0
 
@@ -79,7 +81,9 @@ class Grid(GridMethodsCL):
 
         self.Args['NxNr'] = self.Args['Nr']*self.Args['Nx']
         self.Args['Nxm1Nrm1'] = (self.Args['Nr']-1)*(self.Args['Nx']-1)
-        self.Args['Nxm1Nrm1_4'] = self.Args['Nxm1Nrm1']//4
+        self.Args['Nxm1Nrm1_4'] = self.Args['Nr']//2 * self.Args['Nx']//2
+#self.Args['Nxm1Nrm1']//4
+
 
     def _send_grid_to_dev(self):
 
