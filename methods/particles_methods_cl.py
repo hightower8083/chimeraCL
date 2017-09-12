@@ -67,32 +67,37 @@ class ParticleMethodsCL(GenericMethodsCL):
                                (WGS_tot,),(WGS,),
                                *args).wait()
 
-    def index_and_sum(self):
-        WGS_tot = int(ceil(self.Args['Np']*1./self.WGS))*self.WGS
-
+    def index_and_sum(self, grid):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
-        for arg in ['sum_in_cell','indx_in_cell','cell_offset']:
-            self.DataDev[arg][:] = 0
 
-        args_strs =  ['x','y','z','indx_in_cell', 'sum_in_cell',
-                      'Nx','Xmin','dx_inv',
-                      'Nr','Rmin','dr_inv', 'Np']
+        self.DataDev['cell_offset'] = self.dev_arr(val=0, dtype=uint32,
+                                      shape=grid.Args['Nxm1Nrm1'])
 
-        args = [self.DataDev[arg].data for arg in args_strs]
+        part_strs =  ['x','y','z','indx_in_cell',
+                      'cell_offset','Np']
+
+        grid_strs =  ['Nx','Xmin','dx_inv',
+                      'Nr','Rmin','dr_inv']
+
+        args = [self.DataDev[arg].data for arg in part_strs] + \
+                    [grid.DataDev[arg].data for arg in grid_strs]
         self._index_and_sum_knl(self.queue,
                                 (WGS_tot,),(WGS,),
                                 *args).wait()
-        self.DataDev['cell_offset'] = self._cumsum(self.DataDev['sum_in_cell'])
+        self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'])
 
-    def index_sort(self, indx):
+    def index_sort(self):
         if self.comm.sort_method == 'Radix':
-            self.DataDev['sort_indx'] = arange(self.queue, 0, indx.size, 1,
-                                               dtype=uint32)
-            [indx,self.DataDev['sort_indx']], evnt = self._sort_rdx_knl(indx,
-                                                      self.DataDev['sort_indx'])
+            self.DataDev['sort_indx'] = arange(self.queue, 0,
+                                         self.DataDev['indx_in_cell'].size, 1,
+                                         dtype=uint32)
+            [indx,self.DataDev['sort_indx']], evnt = self._sort_rdx_knl(
+                                                 self.DataDev['indx_in_cell'],
+                                                 self.DataDev['sort_indx'])
             evnt.wait()
         elif self.comm.sort_method == 'NumPy':
-                self.DataDev['sort_indx'] = indx.get().argsort()
+                self.DataDev['sort_indx'] = self.DataDev['indx_in_cell'].\
+                                                                get().argsort()
                 self.DataDev['sort_indx'] = to_device(self.queue,
                                                self.DataDev['sort_indx'])
 

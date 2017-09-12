@@ -39,13 +39,13 @@ __kernel void index_and_sum_in_cell(
   __global double *z,
   __global uint *indx_in_cell,
   __global uint *sum_in_cell,
+  __constant uint *num_p,
   __constant uint *Nx,
   __constant double *xmin,
   __constant double *dx_inv,
   __constant uint *Nr,
   __constant double *rmin,
-  __constant double *dr_inv,
-  __constant uint *num_p)
+  __constant double *dr_inv)
 {
   uint ip = get_global_id(0);
   if (ip < *num_p)

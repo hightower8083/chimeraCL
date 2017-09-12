@@ -42,7 +42,8 @@ __kernel void depose_scalar(
     // get cell number and period of 4cell-grid
     uint Nx_grid = *Nx;
     uint Nx_cell = Nx_grid-1;
-    uint Nx_2 = Nx_cell/2;
+    uint Nx_2 = Nx_grid/2;
+    uint Nr_cell = *Nr-1;
 
     // get indicies of 4cell origin (left-bottom)
     uint ir = i_cell/Nx_2;
@@ -60,6 +61,7 @@ __kernel void depose_scalar(
     else if (cell_offset==3)
       {ix += 1;ir += 1;}
 
+if (ix<Nx_cell && ir<Nr_cell ){
     // get 1D indicies of the selected
     // cell and grid node on the global grid
     uint i_cell_glob = ix + ir*Nx_cell;
@@ -70,7 +72,7 @@ __kernel void depose_scalar(
     uint ip_end = indx_offset[i_cell_glob+1];
 
     // skip empty cells
-    if (ip_start == ip_end) {return;}
+if (ip_start != ip_end){
 
     // allocate few integer counters
     uint i,j,t,i_dep;
@@ -143,6 +145,7 @@ __kernel void depose_scalar(
         scl_m1[i_dep].s1 += scl_cell_m1[i][j].s1;
         }}
   }
+}}
 }
 
 // Linear projection of a scalar onto 2D grid
@@ -302,7 +305,8 @@ __kernel void depose_vector(
     // get cell number and period of 4cell-grid
     uint Nx_grid = *Nx;
     uint Nx_cell = Nx_grid-1;
-    uint Nx_2 = Nx_cell/2;
+    uint Nx_2 = Nx_grid/2;
+    uint Nr_cell = *Nr-1;
 
     // get indicies of 4cell origin (left-bottom)
     uint ir = i_cell/Nx_2;
@@ -320,6 +324,8 @@ __kernel void depose_vector(
     else if (cell_offset==3)
       {ix += 1;ir += 1;}
 
+if (ix<Nx_cell && ir<Nr_cell ){
+
     // get 1D indicies of the selected
     // cell and grid node on the global grid
     uint i_cell_glob = ix + ir*Nx_cell;
@@ -330,7 +336,7 @@ __kernel void depose_vector(
     uint ip_end = indx_offset[i_cell_glob+1];
 
     // skip empty cells
-    if (ip_start == ip_end) {return;}
+if (ip_start != ip_end){
 
     // allocate few integer counters
     uint i,j,k,t,i_dep;
@@ -423,6 +429,7 @@ __kernel void depose_vector(
         vec_z_m1[i_dep].s1 += vec_cell_m1[2][i][j].s1;
         }}
   }
+}}
 }
 
 // Linear projection of a weighted vector of particles onto 2D grid
