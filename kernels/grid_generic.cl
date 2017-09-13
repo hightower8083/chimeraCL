@@ -6,10 +6,10 @@
 // Set to zero all elements of complex type field
 __kernel void set_cdouble_to_zero(
   __global double2 *rho,
-  __constant uint *NxNr)
+           uint arr_size)
 {
   uint i_cell = get_global_id(0);
-  if (i_cell < *NxNr)
+  if (i_cell < arr_size)
    {
     rho[i_cell].s0 = 0.0;
     rho[i_cell].s1 = 0.0;
@@ -52,13 +52,12 @@ __kernel void divide_by_r_clx(
 // Substract 0-th row from 1-st for double type 2D array
 __kernel void treat_axis_dbl(
   __global double *arr,
-  __constant uint *Nx)
+             uint Nx)
 {
   uint i_cell = get_global_id(0);
-  if (i_cell < *Nx)
+  if (i_cell < Nx)
    {
-    uint Nx_loc = *Nx;
-    uint ir = i_cell/Nx_loc;
+    uint Nx_loc = Nx;
     arr[i_cell + Nx_loc] -= arr[i_cell];
    }
 }
@@ -66,13 +65,12 @@ __kernel void treat_axis_dbl(
 // Substract 0-th row from 1-st for complex type 2D array
 __kernel void treat_axis_clx(
   __global double2 *arr,
-  __constant uint *Nx)
+               uint Nx)
 {
   uint i_cell = get_global_id(0);
-  if (i_cell < *Nx)
+  if (i_cell < Nx)
    {
-    uint Nx_loc = *Nx;
-    uint ir = i_cell/Nx_loc;
+    uint Nx_loc = Nx;
     arr[i_cell+Nx_loc].s0 -= arr[i_cell].s0;
     arr[i_cell+Nx_loc].s1 -= arr[i_cell].s1;
    }
@@ -82,199 +80,11 @@ __kernel void treat_axis_clx(
 __kernel void cast_array_d2c(
   __global double2 *arr_in,
   __global double *arr_out,
-  __constant uint *Nxm1Nrm1)
+           uint arr_size)
 {
   uint i_cell = get_global_id(0);
-  if (i_cell < *Nxm1Nrm1)
+  if (i_cell < arr_size)
    {
     arr_out[i_cell] = arr_in[i_cell].s0;
    }
-}
-
-// Copy a double-type odd-lengths 2D array (Nr Nx)
-// to a truncated double-type even-lengths one (Nr-1,Nx-1)
-// ____________        __________
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|  -->  |_|_|_|_|_|
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|
-//
-__kernel void copy_array_to_even_grid_d2d(
-    __global double *arr_in,
-    __global double *arr_out,
-    __constant uint *Nx,
-    __constant uint *Nxm1Nrm1)
-{
-    uint i_cell_even = get_global_id(0);
-    if (i_cell_even < *Nxm1Nrm1)
-    {
-        uint Nx_grid_odd = *Nx;
-        uint Nx_grid_evn = Nx_grid_odd - 1;
-
-        uint ir = i_cell_even/Nx_grid_evn ;
-        uint ix = i_cell_even - ir*Nx_grid_evn ;
-
-        uint i_cell_odd = ix + (ir+1)*Nx_grid_odd;
-
-        arr_out[i_cell_even] = arr_in[i_cell_odd];
-    }
-}
-
-// Copy a double-type odd-lengths 2D array (Nr Nx)
-// to a truncated complex-type even-lengths one (Nr-1,Nx-1)
-// ____________        __________
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|  -->  |_|_|_|_|_|
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|
-//
-__kernel void copy_array_to_even_grid_d2c(
-    __global double *arr_in,
-    __global double2 *arr_out,
-    __constant uint *Nx,
-    __constant uint *Nxm1Nrm1)
-{
-    uint i_cell_even = get_global_id(0);
-    if (i_cell_even < *Nxm1Nrm1)
-    {
-        uint Nx_grid_odd = *Nx;
-        uint Nx_grid_evn = Nx_grid_odd - 1;
-
-        uint ir = i_cell_even/Nx_grid_evn ;
-        uint ix = i_cell_even - ir*Nx_grid_evn ;
-
-        uint i_cell_odd = ix + (ir+1)*Nx_grid_odd;
-
-        arr_out[i_cell_even].s0 = arr_in[i_cell_odd];
-    }
-}
-
-// Copy a complex-type odd-lengths 2D array (Nr Nx)
-// to a truncated complex-type even-lengths one (Nr-1,Nx-1)
-// ____________        __________
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|  -->  |_|_|_|_|_|
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|       |_|_|_|_|_|
-// |_|_|_|_|_|_|
-//
-__kernel void copy_array_to_even_grid_c2c(
-    __global double2 *arr_in,
-    __global double2 *arr_out,
-    __constant uint *Nx,
-    __constant uint *Nxm1Nrm1)
-{
-    uint i_cell_even = get_global_id(0);
-    if (i_cell_even < *Nxm1Nrm1)
-    {
-        uint Nx_grid_odd = *Nx;
-        uint Nx_grid_evn = Nx_grid_odd - 1;
-
-        uint ir = i_cell_even/Nx_grid_evn ;
-        uint ix = i_cell_even - ir*Nx_grid_evn ;
-
-        uint i_cell_odd = ix + (ir+1)*Nx_grid_odd;
-
-        arr_out[i_cell_even].s0 = arr_in[i_cell_odd].s0;
-        arr_out[i_cell_even].s1 = arr_in[i_cell_odd].s1;
-    }
-}
-
-// Copy a truncated double-type even-lengths 2D array
-// (Nr-1 Nx-1) to a double-type odd-lengths one (Nr,Nx)
-// __________        ____________
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-// |_|_|_|_|_| -->   |_|_|_|_|_|_|
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-//                   |_|_|_|_|_|_|
-//
-__kernel void copy_array_to_odd_grid_d2d(
-    __global double *arr_in,
-    __global double *arr_out,
-    __constant uint *Nx,
-    __constant uint *Nxm1Nrm1)
-{
-    uint i_cell_even = get_global_id(0);
-    if (i_cell_even < *Nxm1Nrm1)
-    {
-        uint Nx_grid_odd = *Nx;
-        uint Nx_grid_evn = Nx_grid_odd - 1;
-
-        uint ir = i_cell_even/Nx_grid_evn ;
-        uint ix = i_cell_even - ir*Nx_grid_evn ;
-
-        uint i_cell_odd = ix + (ir+1)*Nx_grid_odd;
-
-        arr_out[i_cell_odd] = arr_in[i_cell_even];
-    }
-}
-
-// Copy a truncated double-type even-lengths 2D array
-// (Nr-1 Nx-1) to a complex-type odd-lengths one (Nr,Nx)
-// __________        ____________
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-// |_|_|_|_|_| -->   |_|_|_|_|_|_|
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-//                   |_|_|_|_|_|_|
-//
-__kernel void copy_array_to_odd_grid_d2c(
-    __global double *arr_in,
-    __global double2 *arr_out,
-    __constant uint *Nx,
-    __constant uint *Nxm1Nrm1)
-{
-    uint i_cell_even = get_global_id(0);
-    if (i_cell_even < *Nxm1Nrm1)
-    {
-        uint Nx_grid_odd = *Nx;
-        uint Nx_grid_evn = Nx_grid_odd - 1;
-
-        uint ir = i_cell_even/Nx_grid_evn ;
-        uint ix = i_cell_even - ir*Nx_grid_evn ;
-
-        uint i_cell_odd = ix + (ir+1)*Nx_grid_odd;
-
-        arr_out[i_cell_odd].s0 = arr_in[i_cell_even];
-    }
-}
-
-// Copy a truncated complex-type even-lengths 2D array
-// (Nr-1 Nx-1) to a complex-type odd-lengths one (Nr,Nx)
-// __________        ____________
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-// |_|_|_|_|_| -->   |_|_|_|_|_|_|
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-// |_|_|_|_|_|       |_|_|_|_|_|_|
-//                   |_|_|_|_|_|_|
-//
-__kernel void copy_array_to_odd_grid_c2c(
-    __global double2 *arr_in,
-    __global double2 *arr_out,
-    __constant uint *Nx,
-    __constant uint *Nxm1Nrm1)
-{
-    uint i_cell_even = get_global_id(0);
-    if (i_cell_even < *Nxm1Nrm1)
-    {
-        uint Nx_grid_odd = *Nx;
-        uint Nx_grid_evn = Nx_grid_odd - 1;
-
-        uint ir = i_cell_even/Nx_grid_evn ;
-        uint ix = i_cell_even - ir*Nx_grid_evn ;
-
-        uint i_cell_odd = ix + (ir+1)*Nx_grid_odd;
-
-        arr_out[i_cell_odd].s0 = arr_in[i_cell_even].s0;
-        arr_out[i_cell_odd].s1 = arr_in[i_cell_even].s1;
-    }
 }

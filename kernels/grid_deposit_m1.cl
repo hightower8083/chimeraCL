@@ -31,13 +31,13 @@ __kernel void depose_scalar(
   __constant uint *Nr,
   __constant double *rmin,
   __constant double *dr_inv,
-  __constant uint *Nxm1Nrm1_4,
+  __constant uint *NxNr_4,
   __global double *scl_m0,
   __global double2 *scl_m1)
 {
   // running kernels over the 4cells
   uint i_cell = get_global_id(0);
-  if (i_cell < *Nxm1Nrm1_4)
+  if (i_cell < *NxNr_4)
    {
     // get cell number and period of 4cell-grid
     uint Nx_grid = *Nx;
@@ -75,7 +75,7 @@ if (ix<Nx_cell && ir<Nr_cell ){
 if (ip_start != ip_end){
 
     // allocate few integer counters
-    uint i,j,t,i_dep;
+    uint i,j,i_dep;
 
     // allocate privite cell array for the deposition
     double scl_cell_m0[2][2];
@@ -290,7 +290,7 @@ __kernel void depose_vector(
   __constant uint *Nr,
   __constant double *rmin,
   __constant double *dr_inv,
-  __constant uint *Nxm1Nrm1_4,
+  __constant uint *NxNr_4,
   __global double *vec_x_m0,
   __global double *vec_y_m0,
   __global double *vec_z_m0,
@@ -300,7 +300,7 @@ __kernel void depose_vector(
 {
   // running kernels over the 4cells
   uint i_cell = get_global_id(0);
-  if (i_cell < *Nxm1Nrm1_4)
+  if (i_cell < *NxNr_4)
    {
     // get cell number and period of 4cell-grid
     uint Nx_grid = *Nx;
@@ -339,7 +339,7 @@ if (ix<Nx_cell && ir<Nr_cell ){
 if (ip_start != ip_end){
 
     // allocate few integer counters
-    uint i,j,k,t,i_dep;
+    uint i,j,k,i_dep;
 
     // allocate privite cell array for the deposition
     double vec_cell_m0[3][2][2];
@@ -490,7 +490,7 @@ __kernel void project_vec6(
     if (ip_start == ip_end) {return;}
 
     // allocate few integer counters
-    uint i,j,k,t,i_dep;
+    uint i,j,k,i_dep;
 
     // allocate privite cell array for the deposition
     double vec_1_cell_m0[3][2][2] ;

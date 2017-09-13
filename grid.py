@@ -1,7 +1,7 @@
 from numpy import uint32, double, complex128
 from numpy import arange, pi, eye, sqrt
 from numpy.fft import fftfreq
-from numpy.linalg import inv as inv
+from numpy.linalg import pinv as inv
 from scipy.special import jn_zeros, jn, j1
 
 from chimeraCL.methods.grid_methods_cl import GridMethodsCL
@@ -25,8 +25,7 @@ class Grid(GridMethodsCL):
 
     def depose_charge(self, species=[]):
         for m in range(self.Args['M']+1):
-            self.set_to_zero(self.DataDev['rho_m'+str(m)],
-                             self.DataDev['NxNr'])
+            self.set_to_zero(self.DataDev['rho_m'+str(m)])
 
         for parts in species:
             self.depose_scalar(parts, 'w', 'rho')
@@ -34,8 +33,7 @@ class Grid(GridMethodsCL):
     def depose_currents(self, species=[]):
         for m in range(self.Args['M']+1):
             for arg in ['Jx', 'Jy', 'Jz']:
-                self.set_to_zero(self.DataDev[arg+'_m'+str(m)],
-                                 self.DataDev['NxNr'])
+                self.set_to_zero(self.DataDev[arg+'_m'+str(m)])
         for parts in species:
             self.depose_vector(parts, ['px', 'py', 'pz'],
                                ['g_inv', 'w'], 'J')
@@ -43,7 +41,7 @@ class Grid(GridMethodsCL):
     def project_fields(self, species=[]):
         for parts in species:
             for arg in ['Ex', 'Ey', 'Ez', 'Bx', 'By', 'Bz']:
-                self.set_to_zero(parts.DataDev[arg], parts.DataDev['Np'])
+                self.set_to_zero(parts.DataDev[arg])
 
             self.project_vec6(parts, ['E', 'B'], ['E', 'B'])
 
@@ -68,26 +66,29 @@ class Grid(GridMethodsCL):
             self.Args['dt'] = self.Args['dx']
         self.Args['dt_inv'] = 1.0/self.Args['dt']
 
+        self.Args['Xgrid'] = self.Args['Xmin'] + self.Args['dx'] * \
+            arange(self.Args['Nx'])
+
         self.Args['Rmin'] = -0.5*self.Args['dr']
         self.Args['Rgrid'] = self.Args['Rmin'] + self.Args['dr'] * \
             arange(self.Args['Nr'])
         self.Args['Rmax'] = self.Args['Rgrid'].max()
+
         self.Args['Rgrid_inv'] = (self.Args['Rgrid'] > 0) / self.Args['Rgrid']
         self.Args['R_period'] = self.Args['Rmax'] + self.Args['dr']
 
         self.Args['NxNr'] = self.Args['Nr'] * self.Args['Nx']
         self.Args['Nxm1Nrm1'] = (self.Args['Nr']-1) * (self.Args['Nx']-1)
-        self.Args['Nxm1Nrm1_4'] = self.Args['Nr']//2 * self.Args['Nx']//2
-        # self.Args['Nxm1Nrm1']//4
+        self.Args['NxNr_4'] = self.Args['Nr']//2 * self.Args['Nx']//2
 
     def _send_grid_to_dev(self):
 
         self.DataDev = {}
 
-        args_int_imprt = ['Nx', 'Nr', 'NxNr', 'Nxm1Nrm1', 'Nxm1Nrm1_4']
-        args_dbl_imprt = ['Xmin', 'Xmax', 'dx', 'dx_inv',
-                          'Rmin', 'Rmax', 'dr', 'dr_inv',
-                          'Rgrid', 'Rgrid_inv', 'kx_env',
+        args_int_imprt = ['Nx', 'Nr', 'NxNr', 'Nxm1Nrm1', 'NxNr_4']
+        args_dbl_imprt = ['Xmin', 'Xmax', 'dx', 'dx_inv', 'Xgrid',
+                          'Rmin', 'Rmax', 'dr', 'dr_inv', 'Rgrid',
+                          'Rgrid_inv', 'kx_env',
                           'kx', 'kx0', 'dkx', 'dt']
 
         args_dbl_m_imprt = ['DHT', 'DHT_inv', 'dDHT_plus', 'dDHT_minus',
@@ -122,17 +123,17 @@ class Grid(GridMethodsCL):
             for m in range(self.Args['M']+1):
                 self.DataDev[arg+str(m)] = self.dev_arr(val=0,
                   dtype=complex128, shape=(self.Args['Nr']-1,
-                                           self.Args['Nx']-1))
+                                           self.Args['Nx']))
 
         for arg in args_fld_aux_init:
             arg += '_dbl'
             self.DataDev[arg] = self.dev_arr(val=0,
-              dtype=double, shape=(self.Args['Nr']-1,self.Args['Nx']-1))
+              dtype=double, shape=(self.Args['Nr']-1,self.Args['Nx']))
 
         for arg in args_fld_aux_init:
             arg += '_clx'
             self.DataDev[arg] = self.dev_arr(val=0, dtype=complex128,
-              shape=(self.Args['Nr']-1,self.Args['Nx']-1))
+              shape=(self.Args['Nr']-1,self.Args['Nx']))
 
     def _make_spectral_axes(self):
         if 'KxShift' in self.Args:
@@ -159,3 +160,4 @@ class Grid(GridMethodsCL):
 
             self.Args['dDHT_plus_m'+str(m)] = eye(self.Args['Nr']-1)
             self.Args['dDHT_minus_m'+str(m)] = eye(self.Args['Nr']-1)
+    

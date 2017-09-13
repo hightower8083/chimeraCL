@@ -31,12 +31,12 @@ __kernel void depose_scalar(
   __constant uint *Nr,
   __constant double *rmin,
   __constant double *dr_inv,
-  __constant uint *Nxm1Nrm1_4,
+  __constant uint *NxNr_4,
   __global double *scl_m0)
 {
   // running kernels over the 4cells
   uint i_cell = get_global_id(0);
-if (i_cell < *Nxm1Nrm1_4)
+if (i_cell < *NxNr_4)
    {
     // get cell number and period of 4cell-grid
     uint Nx_grid = *Nx;
@@ -255,14 +255,14 @@ __kernel void depose_vector(
   __constant uint *Nr,
   __constant double *rmin,
   __constant double *dr_inv,
-  __constant uint *Nxm1Nrm1_4,
+  __constant uint *NxNr_4,
   __global double *vec_x_m0,
   __global double *vec_y_m0,
   __global double *vec_z_m0)
 {
   // running kernels over the 4cells
   uint i_cell = get_global_id(0);
-  if (i_cell < *Nxm1Nrm1_4)
+  if (i_cell < *NxNr_4)
    {
     // get cell number and period of 4cell-grid
     uint Nx_grid = *Nx;
