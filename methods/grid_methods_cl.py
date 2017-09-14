@@ -58,18 +58,18 @@ class GridMethodsCL(GenericMethodsCL):
         # Depose weights by 4-cell-grid scheme
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr_4'])
 
-        part_strs = ['sort_indx','x','y','z',
+        part_str = ['sort_indx','x','y','z',
                      sclr,'cell_offset',]
-        grid_strs = ['Nx', 'Xmin', 'dx_inv',
+        grid_str = ['Nx', 'Xmin', 'dx_inv',
                      'Nr', 'Rmin', 'dr_inv',
                      'NxNr_4']
-        fld_strs = [fld+'_m'+str(m) for m in range(self.Args['M']+1)]
+        fld_str = [fld+'_m'+str(m) for m in range(self.Args['M']+1)]
 
-        args_parts = [parts.DataDev[arg].data for arg in part_strs]
-        args_grid = [self.DataDev[arg].data for arg in grid_strs]
-        args_fld = [self.DataDev[arg].data for arg in fld_strs]
+        args_part = [parts.DataDev[arg].data for arg in part_str]
+        args_grid = [self.DataDev[arg].data for arg in grid_str]
+        args_fld = [self.DataDev[arg].data for arg in fld_str]
 
-        args = args_parts + args_grid + args_fld
+        args = args_part + args_grid + args_fld
 
         evnt = enqueue_marker(self.queue)
         for i_off in arange(4).astype(uint32):
@@ -78,6 +78,7 @@ class GridMethodsCL(GenericMethodsCL):
                                            i_off, *args,
                                            wait_for = [evnt,])
 
+    def postproc_depose_scalar(self, fld):
         # Correct near axis deposition
         args_grid = [self.DataDev[fld+'_m'+str(m)].data \
                      for m in range(self.Args['M']+1)]
@@ -94,8 +95,8 @@ class GridMethodsCL(GenericMethodsCL):
                                      args_grid[m], uint32(self.Args['Nx']))
         # Divide by radius
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr'])
-        grid_strs =  ['NxNr','Nx','Rgrid_inv']
-        grid_args = [self.DataDev[arg].data for arg in grid_strs]
+        grid_str =  ['NxNr','Nx','Rgrid_inv']
+        grid_args = [self.DataDev[arg].data for arg in grid_str]
 
         enqueue_barrier(self.queue)
         self._divide_by_r_dbl_knl(self.queue,(WGS_tot,), (WGS,),
@@ -106,50 +107,44 @@ class GridMethodsCL(GenericMethodsCL):
                                  args_grid[m],*grid_args)
         enqueue_barrier(self.queue)
 
-
     def project_scalar(self, parts, sclr, fld):
-        # Project a scalar by 4-cell-grid scheme:
-        #   to be replaced with normal scheme
         WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1'])
 
-        part_strs = ['sort_indx',sclr,'x','y','z','cell_offset']
+        part_str = ['sort_indx',sclr,'x','y','z','cell_offset']
 
-        grid_strs = ['Nx', 'Xmin', 'dx_inv',
+        grid_str = ['Nx', 'Xmin', 'dx_inv',
                      'Nr', 'Rmin', 'dr_inv',
                      'Nxm1Nrm1']
 
-        fld_strs = [fld+'_m'+str(m) for m in range(self.Args['M']+1)]
+        fld_str = [fld+'_m'+str(m) for m in range(self.Args['M']+1)]
 
-        args_parts = [parts.DataDev[arg].data for arg in part_strs]
-        args_grid = [self.DataDev[arg].data for arg in grid_strs]
-        args_fld = [self.DataDev[arg].data for arg in fld_strs]
-        
+        args_parts = [parts.DataDev[arg].data for arg in part_str]
+        args_grid = [self.DataDev[arg].data for arg in grid_str]
+        args_fld = [self.DataDev[arg].data for arg in fld_str]
+
         args = args_parts + args_grid + args_fld
         evnt = self._project_scalar_knl(self.queue, (WGS_tot,),(WGS,),*args)
 
     def depose_vector(self, parts, vec, factors,vec_fld):
         # Depose weights by 4-cell-grid scheme
 
-        part_strs =  ['sort_indx','x','y','z'] + vec + factors + \
+        part_str =  ['sort_indx','x','y','z'] + vec + factors + \
                      ['cell_offset']
 
-        grid_strs = ['Nx', 'Xmin', 'dx_inv',
+        grid_str = ['Nx', 'Xmin', 'dx_inv',
                      'Nr', 'Rmin', 'dr_inv',
                      'NxNr_4']
-        fld_strs = []
 
+        fld_str = []
         for m in range(self.Args['M']+1):
             for comp in ('x','y','z'):
-                fld_strs.append(vec_fld+comp+'_m'+str(m))
+                fld_str.append(vec_fld + comp + '_m' + str(m))
 
-        args_parts = [parts.DataDev[arg].data for arg in part_strs]
-        args_grid = [self.DataDev[arg].data for arg in grid_strs]
-        args_fld = [self.DataDev[arg].data for arg in fld_strs]
+        args_part = [parts.DataDev[arg].data for arg in part_str]
+        args_grid = [self.DataDev[arg].data for arg in grid_str]
+        args_fld = [self.DataDev[arg].data for arg in fld_str]
 
-        args_dep = args_parts + args_grid + args_fld
-
-        args_raddiv_strs =  ['NxNr','Nx','Rgrid_inv']
-        args_raddiv = [self.DataDev[arg].data for arg in args_raddiv_strs]
+        args_dep = args_part + args_grid + args_fld
 
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr_4'])
         evnt = enqueue_marker(self.queue)
@@ -159,6 +154,10 @@ class GridMethodsCL(GenericMethodsCL):
                                           i_off, *args_dep,
                                           wait_for = [evnt,])
         enqueue_barrier(self.queue)
+
+    def postproc_depose_vector(self,vec_fld):
+        args_raddiv_str =  ['NxNr','Nx','Rgrid_inv']
+        args_raddiv = [self.DataDev[arg].data for arg in args_raddiv_str]
 
         for fld in [vec_fld + comp for comp in ('x','y','z')]:
             # Correct near axis deposition
@@ -187,30 +186,26 @@ class GridMethodsCL(GenericMethodsCL):
             enqueue_barrier(self.queue)
 
     def project_vec6(self, parts, vecs, flds):
-        # Project 2 fields by 4-cell-grid scheme
-        #   to be replaced with normal scheme
         WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1'])
 
-
-        parts_strs = ['sort_indx',] + \
+        part_str = ['sort_indx',] + \
                      [vecs[0] + comp for comp in ('x','y','z')] + \
                      [vecs[1] + comp for comp in ('x','y','z')] + \
                      ['x','y','z','cell_offset',]
 
-        grid_strs = ['Nx', 'Xmin', 'dx_inv',
+        grid_str = ['Nx', 'Xmin', 'dx_inv',
                      'Nr', 'Rmin', 'dr_inv',
                      'Nxm1Nrm1']
 
-        flds_strs = [flds[0] + comp for comp in ('x','y','z')] + \
-                    [flds[1] + comp for comp in ('x','y','z')]
+        fld_str = []
+        for m in range(self.Args['M']+1):
+            for fld in flds:
+                for comp in ('x','y','z'):
+                    fld_str.append(fld + comp + '_m' + str(m))
 
-        args_parts = [parts.DataDev[arg].data for arg in parts_strs]
-        args_grid = [self.DataDev[arg].data for arg in grid_strs]
-
-        args_fld = []
-        for fld in flds_strs:
-            args_fld += [self.DataDev[fld+'_m'+str(m)].data \
-                         for m in range(self.Args['M']+1)]
+        args_parts = [parts.DataDev[arg].data for arg in part_str]
+        args_grid = [self.DataDev[arg].data for arg in grid_str]
+        args_fld = [self.DataDev[arg].data for arg in fld_str]
 
         args = args_parts + args_grid + args_fld
         evnt = self._project_vec6_knl(self.queue, (WGS_tot,),(WGS,),*args)
@@ -223,7 +218,6 @@ class GridMethodsCL(GenericMethodsCL):
 
             self.DataDev['field_fb_aux1_dbl'] = self.DataDev[arg_in+'0']\
                                                   [1:].copy()
-                                                  
             self.DataDev['field_fb_aux2_dbl'] = \
                 self._dot0(self.DataDev[dht_arg+'0'],
                            self.DataDev['field_fb_aux1_dbl'])
@@ -284,7 +278,8 @@ class GridMethodsCL(GenericMethodsCL):
 
     def set_to_zero(self, arr):
         if arr.dtype != complex128:
-            arr.fill(0)
+            arr[:] = 0
+            enqueue_barrier(self.queue)
         else:
             arr_size = arr.size
             WGS, WGS_tot = self.get_wgs(arr_size)
@@ -313,7 +308,7 @@ class GridMethodsCL(GenericMethodsCL):
 
             def dot1_wrp(a,b):
                 c = empty_like(b)
-                self._dot1_knl(c,a,b)
+                self._dot_knl(c,a,b)
                 return c
 
             self._dot0 = dot0_wrp

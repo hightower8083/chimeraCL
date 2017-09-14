@@ -67,7 +67,7 @@ __kernel void index_and_sum_in_cell(
      }
     else
      {
-      indx_in_cell[ip] = Nr_loc * Nx_loc + 1;
+      indx_in_cell[ip] = (Nr_loc+1) * (Nx_loc+1) + 1;
      }
   }
 }

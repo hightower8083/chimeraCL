@@ -4,6 +4,7 @@ import sys
 from methods.generic_methods_cl import Communicator
 from particles import Particles
 from grid import Grid
+from copy import deepcopy
 
 def run_test(dims=(1024,256),Np=3e6,answers=[0,2],verb=False,
              aligned=False, Nint = 100, Nheatup = 10):
@@ -17,7 +18,6 @@ def run_test(dims=(1024,256),Np=3e6,answers=[0,2],verb=False,
                'M':1}
 
     parts = Particles(grid_in,comm)
-    grid = Grid(grid_in,comm)
 
     beam_in = {'Np':int(Np),
                'x_c':0.,'Lx':0.2,
@@ -29,12 +29,13 @@ def run_test(dims=(1024,256),Np=3e6,answers=[0,2],verb=False,
 
     parts.make_parts(beam_in)
     parts.sort_parts()
-    if aligned:
-        parts.align_parts()
+
+    sort_indx = parts.DataDev['sort_indx'].copy()
 
     for i in range(Nint+Nheatup):
         if i==Nheatup: t0 = time()
-        grid.depose_currents([parts,])
+        parts.DataDev['sort_indx'] = sort_indx
+        parts.align_parts()
 
     comm.thr.synchronize()
     timing_avrg = (time()-t0)/Nint*1e3
@@ -45,8 +46,9 @@ def run_test(dims=(1024,256),Np=3e6,answers=[0,2],verb=False,
     return timing_avrg
 
 if __name__ == "__main__":
-
+    from numpy import array, int32
     conv_to_list = lambda str_var: list(array( str_var.split(':')).\
                                           astype(int32))
 
     run_test(answers=conv_to_list(sys.argv[-1]),verb=True)
+

@@ -30,13 +30,18 @@ class Grid(GridMethodsCL):
         for parts in species:
             self.depose_scalar(parts, 'w', 'rho')
 
+        self.postproc_depose_scalar('rho')
+
     def depose_currents(self, species=[]):
         for m in range(self.Args['M']+1):
             for arg in ['Jx', 'Jy', 'Jz']:
                 self.set_to_zero(self.DataDev[arg+'_m'+str(m)])
+
         for parts in species:
             self.depose_vector(parts, ['px', 'py', 'pz'],
                                ['g_inv', 'w'], 'J')
+
+        self.postproc_depose_vector('J')
 
     def project_fields(self, species=[]):
         for parts in species:
@@ -160,4 +165,3 @@ class Grid(GridMethodsCL):
 
             self.Args['dDHT_plus_m'+str(m)] = eye(self.Args['Nr']-1)
             self.Args['dDHT_minus_m'+str(m)] = eye(self.Args['Nr']-1)
-    

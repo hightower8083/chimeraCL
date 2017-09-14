@@ -42,7 +42,7 @@ class Particles(ParticleMethodsCL):
                                         self.DataDev['py']*self.DataDev['py'] +
                                         self.DataDev['pz']*self.DataDev['pz'])
 
-        self.DataDev['w'][:] = 1.
+        self.DataDev['w'][:] = self.Args['q']
         self.DataDev['indx_in_cell'] = self.dev_arr(val=0, dtype=uint32,
                                                     shape=Np)
         self.reset_num_parts()
@@ -63,6 +63,9 @@ class Particles(ParticleMethodsCL):
 
         if 'dt' not in self.Args:
             self.Args['dt'] = 1.
+
+        if 'q' not in self.Args:
+            self.Args['q'] = 1.
 
         self.Args['dt_2'] = 0.5*self.Args['dt']
         self.Args['dt_inv'] = 1.0/self.Args['dt']

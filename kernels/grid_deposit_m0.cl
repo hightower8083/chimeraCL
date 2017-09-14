@@ -174,7 +174,7 @@ __kernel void project_scalar(
     for (int i=0;i<2;i++){
       for (int j=0;j<2;j++){
         int i_dep = i_grid_glob + j + Nx_grid*i;
-        scl_cell_m0[i][j] += scl_m0[i_dep];
+        scl_cell_m0[i][j] = scl_m0[i_dep];
       }}
 
     // allocate privitely some reused variables

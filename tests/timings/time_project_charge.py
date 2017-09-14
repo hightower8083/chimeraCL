@@ -47,6 +47,7 @@ def run_test(dims=(1024,256),Np=3e6,answers=[0,2],verb=False,
     return timing_avrg
 
 if __name__ == "__main__":
+    from numpy import array, int32
     conv_to_list = lambda str_var: list(array( str_var.split(':')).\
                                           astype(int32))
 
