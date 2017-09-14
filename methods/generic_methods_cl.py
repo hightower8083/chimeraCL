@@ -28,7 +28,7 @@ class GenericMethodsCL:
         if self.dev_type=='CPU':
             self.WGS = 32
         else:
-            self.WGS = self.ctx.devices[0].max_work_group_size
+            self.WGS = 64 #self.ctx.devices[0].max_work_group_size
 
         self.block_def_str = "#define BLOCK_SIZE {:d}\n".format(self.WGS)
 
@@ -48,12 +48,18 @@ class Communicator:
             ctx_kw_args['interactive'] = True
 
         self.ctx = create_some_context(**ctx_kw_args)
-        selected_dev = self.ctx.devices[0]
+        self.queue = CommandQueue(self.ctx)
+
+        api = ocl_api()
+        self.thr = api.Thread(cqd=self.queue)
+
+        selected_dev = self.queue.device #ctx.devices[0]
         self.dev_type = device_type.to_string(selected_dev.type)
         self.plat_name = selected_dev.platform.vendor
+        self.ocl_version = selected_dev.opencl_c_version
 
-        print("{} device is chosen on {} platform".
-              format(self.dev_type,self.plat_name))
+        print("{} device is chosen on {} platform with {}".
+              format(self.dev_type,self.plat_name,self.ocl_version))
 
         if self.dev_type=='CPU' and self.plat_name=='Apple':
             print('\tReikna FFT is replaced by pyFFTW')
@@ -69,8 +75,4 @@ class Communicator:
 
         self.sort_method = 'Radix'
 
-        self.queue = CommandQueue(self.ctx)
-
-        api = ocl_api()
-        self.thr = api.Thread(cqd=self.queue)
 

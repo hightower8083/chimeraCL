@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
-from timings.time_depose_charge import run_test
-
+from tests.timings.time_depose_charge import run_test
 
 answers_cpu = [0,]
 answers_gpu = None

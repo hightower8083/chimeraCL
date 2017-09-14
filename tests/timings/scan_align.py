@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from timings.time_align import run_test
+from tests.timings.time_align import run_test
 
 num_ps = range(10**6,7*10**6,10**6)
 Nint = 20

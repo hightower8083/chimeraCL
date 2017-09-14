@@ -28,23 +28,26 @@ def run_test(dims=(1024,256),Np=3e6,answers=[0,2],verb=False,
                'pz_c':0.,'dpz':0.5}
 
     parts.make_parts(beam_in)
-    parts.sort_parts()
-    grid.depose_charge([parts,])
 
     for i in range(Nint+Nheatup):
         if i==Nheatup: t0 = time()
-        grid.fb_transform(['rho',])
+        parts.sort_parts(grid)
 
     comm.thr.synchronize()
     timing_avrg = (time()-t0)/Nint*1e3
     if verb:
         print( "Timing averaged over {:d} loops is {:g} ms".
                format(Nint,timing_avrg) )
+    del parts
+    del grid
+    del comm
 
     return timing_avrg
 
 if __name__ == "__main__":
+    from numpy import array, int32
     conv_to_list = lambda str_var: list(array( str_var.split(':')).\
                                           astype(int32))
 
     run_test(answers=conv_to_list(sys.argv[-1]),verb=True)
+
