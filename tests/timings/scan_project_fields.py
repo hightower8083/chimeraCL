@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from timings.time_project_fields import run_test
+from tests.timings.time_project_fields import run_test
 
 Nint = 30
 Nheatup = 10

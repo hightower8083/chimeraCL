@@ -19,42 +19,35 @@ def run_test(dims=(1024,256),Np=2e6,answers=[0,2],verb=False,
 
     beam_in = {'Np':int(7*10**6),
                'x_c':0.,'Lx':0.3,
-               'y_c':0.,'Ly':0.3,
-               'z_c':0.,'Lz':0.3,
+               'y_c':0.2,'Ly':0.3,
+               'z_c':0.2,'Lz':0.3,
                'px_c':0.,'dpx':0.,
-               'py_c':1.,'dpy':0.,
+               'py_c':0.,'dpy':0.,
                'pz_c':0.,'dpz':0.,
               }
 
     parts.make_parts(beam_in)
     parts.sort_parts(grid=grid)
     parts.align_parts()
+    grid.depose_charge([parts,])
 
-    xx = parts.DataDev['x'].get()
-    yy = parts.DataDev['y'].get()
-    zz = parts.DataDev['z'].get()
-    rr = np.sqrt(yy**2+zz**2)
-    err_xr = 0
+    tmp0 = grid.DataDev['rho_m0'].get().copy()
+    tmp1 = grid.DataDev['rho_m1'].get().copy()
 
-    grid.DataDev['Ex_m0'][:] = 0
-    grid.DataDev['Ex_m1'][:] = 0
-    dat = grid.Args['Xgrid'][None,:]*grid.Args['Rgrid'][:,None]
-    grid.DataDev['Ex_m0'][:] = dat.astype(grid.DataDev['Ex_m0'].dtype)
-    grid.project_fields([parts,])
-    comm.thr.synchronize()
-    err_xr += np.abs(parts.DataDev['Ex'].get() - xx*rr).max()
+    grid.fb_transform(comps = ['rho',],dir=0)
+    grid.DataDev['rho_m0'][:] = 0.
+    grid.DataDev['rho_m1'][:] = 0.
+    grid.fb_transform(comps = ['rho',],dir=1)
 
-    grid.DataDev['Ex_m0'][:] = 0
-    grid.DataDev['Ex_m1'][:] = 0
-    dat = grid.Args['Xgrid'][None,:]*grid.Args['Rgrid'][:,None]
-    grid.DataDev['Ex_m1'][:] = dat.astype(grid.DataDev['Ex_m1'].dtype)
-    grid.project_fields([parts,])
-    comm.thr.synchronize()
-    err_xr += np.abs(parts.DataDev['Ex'].get() - xx*yy).max()
+    err_xr = (np.abs(grid.DataDev['rho_m0'].get()-tmp0)[1:] /
+              np.abs(tmp0[1:]).max() + 
+              np.abs(grid.DataDev['rho_m1'].get()-tmp1)[1:] /
+              np.abs(tmp1[1:]).max()).max()
+
 
     comm.thr.synchronize()
     if verb:
-        print( "Error in projection is {:g}".
+        print( "Error in transform is {:g}".
                format(err_xr) )
     return err_xr
 

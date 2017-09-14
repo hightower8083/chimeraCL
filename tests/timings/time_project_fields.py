@@ -28,7 +28,7 @@ def run_test(dims=(1024,256),Np=2e6,answers=[0,2],verb=False,
                'pz_c':0.,'dpz':0.5}
 
     parts.make_parts(beam_in)
-    parts.sort_parts()
+    parts.sort_parts(grid)
     if aligned:
         parts.align_parts()
     grid.depose_charge([parts,])

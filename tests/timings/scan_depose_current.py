@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from timings.time_depose_current import run_test
+from tests.timings.time_depose_current import run_test
 
 Nint = 30
 Nheatup = 10

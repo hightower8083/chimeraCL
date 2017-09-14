@@ -42,8 +42,8 @@ def run_test(dims=(1024,256),Np=2e6,answers=[0,2],verb=False,
     err_xr = np.abs(parts.DataDev['Ex'].get()-(xx*rr)).max()
     comm.thr.synchronize()
     if verb:
-        print( "Error in projection of mode {:d} is {:g}".
-               format(grid_in['M'], err_xr) )
+        print( "Error in projection is {:g}".
+               format(err_xr) )
     return err_xr
 
 if __name__ == "__main__":

@@ -28,7 +28,7 @@ def run_test(dims=(1024,256),Np=3e6,answers=[0,2],verb=False,
                'pz_c':0.,'dpz':0.5}
 
     parts.make_parts(beam_in)
-    parts.sort_parts()
+    parts.sort_parts(grid)
     grid.depose_charge([parts,])
 
     for i in range(Nint+Nheatup):
@@ -41,6 +41,9 @@ def run_test(dims=(1024,256),Np=3e6,answers=[0,2],verb=False,
         print( "Timing averaged over {:d} loops is {:g} ms".
                format(Nint,timing_avrg) )
 
+    del parts
+    del grid
+    del comm
     return timing_avrg
 
 if __name__ == "__main__":
