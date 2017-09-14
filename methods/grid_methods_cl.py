@@ -349,7 +349,7 @@ class GridMethodsCL(GenericMethodsCL):
         if self.comm.fft_method=='pyFFTW':
             self.arr_fft_in[:] = arr.get()
             self._fft_knl[dir]()
-            arr_out = self.arr_fft_out
+            arr_out = to_device(self.queue,self.arr_fft_out)
         else:
             arr_out = empty_like(arr)
             self._fft_knl(arr_out,arr,dir)

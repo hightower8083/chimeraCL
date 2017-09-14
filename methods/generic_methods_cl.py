@@ -58,7 +58,6 @@ class Communicator:
         self.plat_name = selected_dev.platform.vendor
         self.ocl_version = selected_dev.opencl_c_version
 
-
         print("{} device is chosen on {} platform with {}".
               format(self.dev_type,self.plat_name,self.ocl_version))
 

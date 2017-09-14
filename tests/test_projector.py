@@ -36,16 +36,16 @@ def run_test(dims=(1024,256),Np=2e6,answers=[0,2],verb=False,
     rr = np.sqrt(yy**2+zz**2)
     err_xr = 0
 
-    grid.DataDev['Ex_m0'][:] = 0
-    grid.DataDev['Ex_m1'][:] = 0
+    grid.set_to_zero(grid.DataDev['Ex_m0'])
+    grid.set_to_zero(grid.DataDev['Ex_m1'])
     dat = grid.Args['Xgrid'][None,:]*grid.Args['Rgrid'][:,None]
     grid.DataDev['Ex_m0'][:] = dat.astype(grid.DataDev['Ex_m0'].dtype)
     grid.project_fields([parts,])
     comm.thr.synchronize()
     err_xr += np.abs(parts.DataDev['Ex'].get() - xx*rr).max()
 
-    grid.DataDev['Ex_m0'][:] = 0
-    grid.DataDev['Ex_m1'][:] = 0
+    grid.set_to_zero(grid.DataDev['Ex_m0'])
+    grid.set_to_zero(grid.DataDev['Ex_m1'])
     dat = grid.Args['Xgrid'][None,:]*grid.Args['Rgrid'][:,None]
     grid.DataDev['Ex_m1'][:] = dat.astype(grid.DataDev['Ex_m1'].dtype)
     grid.project_fields([parts,])

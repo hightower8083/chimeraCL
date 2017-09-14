@@ -19,7 +19,7 @@ def run_test(dims=(1024,256),Np=2e6,answers=[0,2],verb=False,
 
     beam_in = {'Np':int(7*10**6),
                'x_c':0.,'Lx':0.3,
-               'y_c':0.,'Ly':0.3,
+               'y_c':0.2,'Ly':0.3,
                'z_c':0.,'Lz':0.3,
                'px_c':0.,'dpx':0.,
                'py_c':1.,'dpy':0.,
@@ -29,7 +29,6 @@ def run_test(dims=(1024,256),Np=2e6,answers=[0,2],verb=False,
     parts.make_parts(beam_in)
     parts.sort_parts(grid=grid)
     parts.align_parts()
-
 
     xx = parts.DataDev['x'].get()
     rr = np.sqrt(parts.DataDev['y'].get()**2 + parts.DataDev['z'].get()**2)

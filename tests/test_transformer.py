@@ -35,15 +35,14 @@ def run_test(dims=(1024,256),Np=2e6,answers=[0,2],verb=False,
     tmp1 = grid.DataDev['rho_m1'].get().copy()
 
     grid.fb_transform(comps = ['rho',],dir=0)
-    grid.DataDev['rho_m0'][:] = 0.
-    grid.DataDev['rho_m1'][:] = 0.
+    grid.set_to_zero(grid.DataDev['rho_m0'])
+    grid.set_to_zero(grid.DataDev['rho_m1'])
     grid.fb_transform(comps = ['rho',],dir=1)
 
     err_xr = (np.abs(grid.DataDev['rho_m0'].get()-tmp0)[1:] /
-              np.abs(tmp0[1:]).max() + 
+              np.abs(tmp0[1:]).max() +
               np.abs(grid.DataDev['rho_m1'].get()-tmp1)[1:] /
               np.abs(tmp1[1:]).max()).max()
-
 
     comm.thr.synchronize()
     if verb:
