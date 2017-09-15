@@ -1,13 +1,12 @@
-from numpy import uint32, double, arange
+import numpy as np
 
-from chimeraCL.methods.particles_methods_cl import ParticleMethodsCL, sqrt
+from chimeraCL.methods.particles_methods_cl import ParticleMethodsCL
+from chimeraCL.methods.particles_methods_cl import sqrt
 
 
 class Particles(ParticleMethodsCL):
     def __init__(self, configs_in, comm=None):
-
         if comm is not None:
-            # taking some pointers from the communicator
             self.comm = comm
             self.queue = comm.queue
             self.ctx = comm.ctx
@@ -15,17 +14,15 @@ class Particles(ParticleMethodsCL):
             self.dev_type = comm.dev_type
             self.plat_name = comm.plat_name
 
+        self.init_particle_methods()
         self._process_configs(configs_in)
-        self._send_grid_to_dev()
-        self._compile_methods()
+        self.send_args_to_dev()
 
     def make_parts(self, beam_in):
-        # make Gaussian beam (to-be-replaced by grid-population routine)
-
         Np = beam_in['Np']
         for arg in ['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv', 'w',
                     'Ex', 'Ey', 'Ez', 'Bx', 'By', 'Bz']:
-            self.DataDev[arg] = self.dev_arr(val=0, shape=Np, dtype=double)
+            self.DataDev[arg] = self.dev_arr(val=0, shape=Np, dtype=np.double)
 
         for arg in ['x', 'y', 'z']:
             self.fill_arr_randn(self.DataDev[arg],
@@ -43,7 +40,7 @@ class Particles(ParticleMethodsCL):
                                         self.DataDev['pz']*self.DataDev['pz'])
 
         self.DataDev['w'][:] = self.Args['q']
-        self.DataDev['indx_in_cell'] = self.dev_arr(val=0, dtype=uint32,
+        self.DataDev['indx_in_cell'] = self.dev_arr(val=0, dtype=np.uint32,
                                                     shape=Np)
         self.reset_num_parts()
 
@@ -74,7 +71,9 @@ class Particles(ParticleMethodsCL):
         self.DataDev = {}
 
         for arg in ['Np', ]:
-            self.DataDev[arg] = self.dev_arr(val=self.Args[arg], dtype=uint32)
+            self.DataDev[arg] = self.dev_arr(val=self.Args[arg],
+                                             dtype=np.uint32)
 
         for arg in ['dt_2', 'dt_inv']:
-            self.DataDev[arg] = self.dev_arr(val=self.Args[arg], dtype=double)
+            self.DataDev[arg] = self.dev_arr(val=self.Args[arg],
+                                             dtype=np.double)

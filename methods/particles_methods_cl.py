@@ -1,5 +1,4 @@
-from numpy import uint32, ceil
-
+import numpy as np
 from pyopencl.clrandom import ThreefryGenerator
 from pyopencl.algorithm import RadixSort
 from pyopencl.array import arange, cumsum, to_device
@@ -9,21 +8,21 @@ from pyopencl.clmath import sqrt as sqrt
 
 from .generic_methods_cl import GenericMethodsCL
 from .generic_methods_cl import compiler_options
-
 from chimeraCL import __path__ as src_path
 
 src_path = src_path[0] + '/kernels/'
 
+
 class ParticleMethodsCL(GenericMethodsCL):
-    def _compile_methods(self):
+    def init_particle_methods(self):
         self.set_global_working_group_size()
 
         self._generator_knl = ThreefryGenerator(context=self.ctx)
 
         self._sort_rdx_knl = RadixSort(self.ctx,
                     "uint *indx_in_cell, uint *indx_init",
-                    key_expr="indx_in_cell[i]", index_dtype=uint32,
-                    sort_arg_names=["indx_in_cell","indx_init"],
+                    key_expr="indx_in_cell[i]", index_dtype=np.uint32,
+                    sort_arg_names=["indx_in_cell", "indx_init"],
                     options=compiler_options)
 
         particles_sources = ''.join(
@@ -42,7 +41,7 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._push_xyz_knl = prg.push_xyz
         self._push_p_boris_knl = prg.push_p_boris
 
-    def push_coords(self,mode='half'):
+    def push_coords(self, mode='half'):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
         if mode=='half':
@@ -51,9 +50,7 @@ class ParticleMethodsCL(GenericMethodsCL):
             args_strs =  ['x','y','z', 'px','py','pz','g_inv','dt','Np']
 
         args = [self.DataDev[arg].data for arg in args_strs]
-        self._push_xyz_knl(self.queue,
-                           (WGS_tot,),(WGS,),
-                           *args).wait()
+        self._push_xyz_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
 
     def push_veloc(self):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
@@ -63,15 +60,13 @@ class ParticleMethodsCL(GenericMethodsCL):
                       'Bx','By','Bz','dt','Np']
 
         args = [self.DataDev[arg].data for arg in args_strs]
-        self._push_p_boris_knl(self.queue,
-                               (WGS_tot,),(WGS,),
-                               *args).wait()
+        self._push_p_boris_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
 
     def index_and_sum(self, grid):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
-        self.DataDev['cell_offset'] = self.dev_arr(val=0, dtype=uint32,
-                                      shape=grid.Args['Nxm1Nrm1'])
+        self.DataDev['cell_offset'] = self.dev_arr(val=0, dtype=np.uint32,
+                                                   shape=grid.Args['Nxm1Nrm1'])
 
         part_strs =  ['x','y','z','indx_in_cell',
                       'cell_offset','Np']
@@ -81,40 +76,36 @@ class ParticleMethodsCL(GenericMethodsCL):
 
         args = [self.DataDev[arg].data for arg in part_strs] + \
                     [grid.DataDev[arg].data for arg in grid_strs]
-        self._index_and_sum_knl(self.queue,
-                                (WGS_tot,),(WGS,),
-                                *args).wait()
+        self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
         self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'])
 
     def index_sort(self):
         if self.comm.sort_method == 'Radix':
-            self.DataDev['sort_indx'] = arange(self.queue, 0,
-                                         self.DataDev['indx_in_cell'].size, 1,
-                                         dtype=uint32)
-            [indx,self.DataDev['sort_indx']], evnt = self._sort_rdx_knl(
-                                                 self.DataDev['indx_in_cell'],
-                                                 self.DataDev['sort_indx'])
+            indx_size = self.DataDev['indx_in_cell'].size
+            self.DataDev['sort_indx'] = arange(self.queue, 0, indx_size, 1,
+                                               dtype=np.uint32)
+
+            [indx, self.DataDev['sort_indx']], evnt = self._sort_rdx_knl(
+                self.DataDev['indx_in_cell'], self.DataDev['sort_indx'])
+
             evnt.wait()
         elif self.comm.sort_method == 'NumPy':
                 self.DataDev['sort_indx'] = self.DataDev['indx_in_cell'].\
-                                                                get().argsort()
-                self.DataDev['sort_indx'] = to_device(self.queue,
-                                               self.DataDev['sort_indx'])
+                    get().argsort()
+                self.DataDev['sort_indx'] = to_device(
+                    self.queue, self.DataDev['sort_indx'])
 
-    def align_and_damp(self, comps_align,comps_simple_dump):
+    def align_and_damp(self, comps_align, comps_simple_dump):
         num_staying = self.DataDev['cell_offset'][-1].get().item()
-        #size_cl = self.dev_arr(val = num_staying,dtype=uint32)
 
         WGS, WGS_tot = self.get_wgs(num_staying)
-
         for comp in comps_align:
             buff = self.dev_arr(dtype=self.DataDev[comp].dtype,
                                 shape=(num_staying,))
-            self._data_align_dbl_knl(self.queue,
-                         (WGS_tot,), (WGS,),
-                         self.DataDev[comp].data, buff.data,
-                         self.DataDev['sort_indx'].data,
-                         uint32(num_staying)).wait()
+            self._data_align_dbl_knl(self.queue, (WGS_tot, ), (WGS, ),
+                                     self.DataDev[comp].data, buff.data,
+                                     self.DataDev['sort_indx'].data,
+                                     np.uint32(num_staying)).wait()
 
             self.DataDev[comp] = buff
 
@@ -123,7 +114,7 @@ class ParticleMethodsCL(GenericMethodsCL):
 
         self.reset_num_parts()
         self.DataDev['sort_indx'] = arange(self.queue, 0, self.Args['Np'], 1,
-                                           dtype=uint32)
+                                           dtype=np.uint32)
 
     def reset_num_parts(self):
         Np = self.DataDev['x'].size
@@ -132,13 +123,13 @@ class ParticleMethodsCL(GenericMethodsCL):
 
     def fill_arr_randn(self, arr, mu=0, sigma=1):
         self._generator_knl.fill_normal(ary=arr, queue=self.queue,
-                                   mu=mu, sigma=sigma)
+                                        mu=mu, sigma=sigma)
         enqueue_barrier(self.queue)
 
     def _cumsum(self,arr_in):
         evnt, arr_tmp = cumsum(arr_in, return_event=True, queue=self.queue)
         evnt.wait()
-        arr_out = self.dev_arr(val=0, dtype=uint32, shape=arr_tmp.size+1)
+        arr_out = self.dev_arr(val=0, dtype=np.uint32, shape=arr_tmp.size+1)
         arr_out[1:] = arr_tmp[:]
         return arr_out
 
@@ -153,8 +144,8 @@ class ParticleMethodsCL(GenericMethodsCL):
                       'Nxm1Nrm1','Np']
         args = [self.DataDev[arg].data for arg in args_strs]
 
-        out_sum = self.dev_arr(dtype=uint32,val=0)
-        sorting_indx = self.dev_arr(val=0,dtype=uint32, shape=self.Args['Np'])
+        out_sum = self.dev_arr(dtype=np.uint32,val=0)
+        sorting_indx = self.dev_arr(val=0,dtype=np.uint32, shape=self.Args['Np'])
 
         self._index_compare_sort_knl(self.queue,
                                      (self.Args['Np'],), None,
@@ -177,7 +168,7 @@ class ParticleMethodsCL(GenericMethodsCL):
 
     def align_and_damp_tst(self, idx, comps):
         num_staying = self.DataDev['cell_offset'][-1].get().item()
-        size_cl = self.dev_arr(val = num_staying,dtype=uint32)
+        size_cl = self.dev_arr(val = num_staying,dtype=np.uint32)
 
         WGS, WGS_tot = self.get_wgs(num_staying)
 
@@ -187,7 +178,7 @@ class ParticleMethodsCL(GenericMethodsCL):
             self._data_align_dbl_tst_knl(self.queue,
                          (WGS_tot,), (WGS,),
                          self.DataDev[comp].data, buff.data,
-                         idx.data, uint32(num_staying)).wait()
+                         idx.data, np.uint32(num_staying)).wait()
 
             self.DataDev[comp] = buff
 
