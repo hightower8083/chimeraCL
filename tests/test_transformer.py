@@ -4,7 +4,8 @@ import sys
 
 from chimeraCL.methods.generic_methods_cl import Communicator
 from chimeraCL.particles import Particles
-from chimeraCL.grid import Grid
+#from chimeraCL.grid import Grid
+from chimeraCL.solver import Solver
 
 def run_test(dims=(1024,256),Np=2e6,answers=[0,2],verb=False,
              aligned=False, Nint = 100, Nheatup = 10):
@@ -15,7 +16,7 @@ def run_test(dims=(1024,256),Np=2e6,answers=[0,2],verb=False,
         'M':1}
 
     parts = Particles(grid_in,comm)
-    grid = Grid(grid_in,comm)
+    grid = Solver(grid_in,comm)
 
     beam_in = {'Np':int(7*10**6),
                'x_c':0.,'Lx':0.3,

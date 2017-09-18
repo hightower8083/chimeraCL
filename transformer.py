@@ -9,6 +9,7 @@ class Transformer(TransformerMethodsCL):
         self.init_transformer_methods()
         self._make_spectral_axes()
         self._make_DHT()
+        self._init_data_on_dev()
 
     def fb_transform(self, comps=[], dir=0):
         for comp in comps:
@@ -43,3 +44,14 @@ class Transformer(TransformerMethodsCL):
 
             self.Args['dDHT_plus_m'+str(m)] = np.eye(self.Args['Nr']-1)
             self.Args['dDHT_minus_m'+str(m)] = np.eye(self.Args['Nr']-1)
+
+    def _init_data_on_dev(self):
+        args_fld_init = ['rho', 'Jx', 'Jy', 'Jz',
+                         'Ex', 'Ey', 'Ez', 'Bx', 'By', 'Bz']
+
+        for arg in args_fld_init:
+            arg += '_fb_m'
+            for m in range(self.Args['M']+1):
+                self.DataDev[arg+str(m)] = self.dev_arr(
+                    val=0, dtype=np.complex128,
+                    shape=(self.Args['Nr']-1, self.Args['Nx']))

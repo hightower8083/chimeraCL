@@ -15,6 +15,7 @@ src_path = src_path[0] + '/kernels/'
 
 class ParticleMethodsCL(GenericMethodsCL):
     def init_particle_methods(self):
+        self.init_generic_methods()
         self.set_global_working_group_size()
 
         self._generator_knl = ThreefryGenerator(context=self.ctx)

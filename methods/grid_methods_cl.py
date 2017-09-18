@@ -13,6 +13,7 @@ src_path = src_path[0] + '/kernels/'
 class GridMethodsCL(GenericMethodsCL):
     def init_grid_methods(self):
         self.init_generic_methods()
+        self.set_global_working_group_size()
 
         grid_sources = []
         grid_sources.append(''.join(open(src_path+"grid_generic.cl")\

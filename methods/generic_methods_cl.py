@@ -21,6 +21,8 @@ class GenericMethodsCL:
     def init_generic_methods(self):
         self.set_global_working_group_size()
 
+        self.DataDev = {}
+
         generic_sources = []
         generic_sources.append(''.join(open(src_path+"generic.cl")\
                                .readlines()) )
@@ -60,7 +62,6 @@ class GenericMethodsCL:
         return arr
 
     def send_args_to_dev(self):
-        self.DataDev = {}
         for arg in self.Args.keys():
             arg_type = type(self.Args[arg])
             if arg_type is int:
@@ -88,6 +89,14 @@ class GenericMethodsCL:
         self._cast_array_d2c_knl(self.queue,(WGS_tot,),(WGS,),
                                  arr_in.data, arr_out.data,
                                  np.uint32(arr_size)).wait()
+
+    def import_comm(self,comm):
+        self.comm = comm
+        self.queue = comm.queue
+        self.ctx = comm.ctx
+        self.thr = comm.thr
+        self.dev_type = comm.dev_type
+        self.plat_name = comm.plat_name
 
 class Communicator:
     def __init__(self, **ctx_kw_args):

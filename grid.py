@@ -2,21 +2,14 @@ import numpy as np
 
 from chimeraCL.methods.grid_methods_cl import GridMethodsCL
 from chimeraCL.methods.generic_methods_cl import GenericMethodsCL
-from chimeraCL.transformer import Transformer
 
-class Grid(GridMethodsCL, Transformer):
+class Grid(GridMethodsCL):
     def __init__(self, configs_in, comm):
         if comm is not None:
-            self.comm = comm
-            self.queue = comm.queue
-            self.ctx = comm.ctx
-            self.thr = comm.thr
-            self.dev_type = comm.dev_type
-            self.plat_name = comm.plat_name
+            self.import_comm(comm)
 
         self._process_configs(configs_in)
         self.init_grid_methods()
-        self.init_transformer()
         self.send_args_to_dev()
         self._init_data_on_dev()
 
