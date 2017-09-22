@@ -6,7 +6,7 @@ from chimeraCL.methods.generic_methods_cl import Communicator
 from chimeraCL.particles import Particles
 from chimeraCL.grid import Grid
 
-def run_test(dims=(1024,256),Np=2e6,answers=[0,2],verb=False,
+def run_test(dims=(1024,256),Np=2e6,answers=[],verb=False,
              aligned=False, Nint = 100, Nheatup = 10):
     comm = Communicator(answers=answers)
     grid_in = {
@@ -50,4 +50,7 @@ if __name__ == "__main__":
     conv_to_list = lambda str_var: list(array( str_var.split(':')).\
                                           astype(int32))
 
-    run_test(answers=conv_to_list(sys.argv[-1]),verb=True)
+    if len(sys.argv)>1:
+        run_test(answers=conv_to_list(sys.argv[-1]),verb=True)
+    else:
+        run_test(verb=True)
