@@ -9,7 +9,7 @@ class Transformer(TransformerMethodsCL):
         self.init_transformer_methods()
         self._make_spectral_axes()
         self._make_DHT()
-        self._init_data_on_dev()
+        self._init_transformer_data_on_dev()
 
     def fb_transform(self, comps=[], dir=0):
         for comp in comps:
@@ -36,18 +36,32 @@ class Transformer(TransformerMethodsCL):
                 + self.Args['kr_m'+str(m)][:,None]**2)
 
     def _make_DHT(self):
+        Rgrid = self.Args['Rgrid'][1:,None]
+
         for m in range(self.Args['M']+1):
-            self.Args['DHT_inv_m'+str(m)] = jn(m, \
-                self.Args['Rgrid'][1:,None] * self.Args['kr_m'+str(m)][None,:])
+
+            kr_0 = jn_zeros(m, self.Args['Nr']-1) / self.Args['R_period']
+            kr_p = jn_zeros(m+1, self.Args['Nr']-1) / self.Args['R_period']
+            kr_m = jn_zeros(m-1, self.Args['Nr']-1) / self.Args['R_period']
+
+            self.Args['DHT_inv_m'+str(m)] = jn(m, Rgrid * kr_0)
             self.Args['DHT_m'+str(m)] = np.linalg.inv(
                 self.Args['DHT_inv_m'+str(m)])
 
-            self.Args['dDHT_plus_m'+str(m)] = np.eye(self.Args['Nr']-1)
-            self.Args['dDHT_minus_m'+str(m)] = np.eye(self.Args['Nr']-1)
+            self.Args['dDHT_plus_m'+str(m)] = self.Args['DHT_m'+str(m)].dot(
+                0.5 * kr_p * jn(m, Rgrid*kr_p))
 
-    def _init_data_on_dev(self):
-        args_fld_init = ['rho', 'Jx', 'Jy', 'Jz',
-                         'Ex', 'Ey', 'Ez', 'Bx', 'By', 'Bz']
+            self.Args['dDHT_minus_m'+str(m)] = self.Args['DHT_m'+str(m)].dot(
+                0.5 * kr_m * jn(m, Rgrid*kr_m))
+
+    def _init_transformer_data_on_dev(self):
+        args_fld_init = ['rho',
+                         'Jx', 'Jy', 'Jz',
+                         'Ex', 'Ey', 'Ez',
+                         'Gx', 'Gy', 'Gz',
+                         'Bx', 'By', 'Bz',
+                         'dN0x', 'dN0y', 'dN0z',
+                         'dN1x', 'dN1y', 'dN1z']
 
         for arg in args_fld_init:
             arg += '_fb_m'

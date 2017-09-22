@@ -10,7 +10,6 @@ from pyopencl import Program
 from reikna.cluda import ocl_api
 
 from chimeraCL import __path__ as src_path
-
 src_path = src_path[0] + '/kernels/'
 
 #compiler_options = ['-cl-fast-relaxed-math',]
@@ -20,8 +19,6 @@ compiler_options = []
 class GenericMethodsCL:
     def init_generic_methods(self):
         self.set_global_working_group_size()
-
-        self.DataDev = {}
 
         generic_sources = []
         generic_sources.append(''.join(open(src_path+"generic.cl")\

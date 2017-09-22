@@ -5,8 +5,8 @@ from pyopencl import enqueue_marker, enqueue_barrier
 
 from .generic_methods_cl import GenericMethodsCL
 from .generic_methods_cl import compiler_options
-from chimeraCL import __path__ as src_path
 
+from chimeraCL import __path__ as src_path
 src_path = src_path[0] + '/kernels/'
 
 

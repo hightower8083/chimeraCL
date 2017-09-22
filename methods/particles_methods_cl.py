@@ -1,4 +1,5 @@
 import numpy as np
+
 from pyopencl.clrandom import ThreefryGenerator
 from pyopencl.algorithm import RadixSort
 from pyopencl.array import arange, cumsum, to_device
@@ -8,8 +9,8 @@ from pyopencl.clmath import sqrt as sqrt
 
 from .generic_methods_cl import GenericMethodsCL
 from .generic_methods_cl import compiler_options
-from chimeraCL import __path__ as src_path
 
+from chimeraCL import __path__ as src_path
 src_path = src_path[0] + '/kernels/'
 
 

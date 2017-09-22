@@ -8,7 +8,9 @@ class Particles(ParticleMethodsCL):
     def __init__(self, configs_in, comm=None):
         if comm is not None:
             self.import_comm(comm)
+        self.set_global_working_group_size()
 
+        self.DataDev = {}
         self.init_particle_methods()
         self._process_configs(configs_in)
         self.send_args_to_dev()

@@ -33,7 +33,6 @@ class TransformerMethodsCL():
                 arg_in_m = arg_in + str(m)
                 arg_out_m = arg_out + str(m)
 
-
                 self.DataDev['field_fb_aux1_clx'] = self.DataDev[arg_in_m]\
                                                       [1:,:].copy()
 
