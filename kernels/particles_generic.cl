@@ -1,5 +1,62 @@
 // this is a source of particles kernels for chimeraCL project
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_fp64:enable
+
+// Fill given grid with uniformly distributed particles
+__kernel void fill_grid(
+  __global double *x,
+  __global double *y,
+  __global double *z,
+  __global double *w,
+  __global double *theta_var,
+  __global double *xgrid,
+  __global double *rgrid,
+           uint Nx,
+           uint ncells,
+           uint Nppc_x,
+           uint Nppc_r,
+           uint Nppc_th)
+{
+    uint i_cell = get_global_id(0);
+    if (i_cell < ncells)
+    {
+        uint Nx_cell = Nx-1;
+        uint Nppc_loc = Nppc_x*Nppc_r*Nppc_th;
+
+        uint ir =  i_cell/Nx_cell;
+        uint ix =  i_cell - Nx_cell*ir;
+        uint ip = i_cell*Nppc_loc;
+
+        double xmin = xgrid[ix];
+        double rmin = rgrid[ir];
+        double thmin = theta_var[i_cell];
+
+        double Lx = xgrid[ix+1] - xgrid[ix];
+        double Lr = rgrid[ir+1] - rgrid[ir];
+        double dx = 1./( (double) Nppc_x);
+        double dr = 1./( (double) Nppc_r);
+        double dth = 2*M_PI/( (double) Nppc_th);
+        double th, rp, sin_th, cos_th, rp_s, rp_c;
+        double r_cell = rmin + 0.5*dr;
+
+        for (uint incell_th=0; incell_th<Nppc_th; incell_th++){
+          th = thmin + incell_th*dth;
+          sin_th = sin(th);
+          cos_th = cos(th);
+          for (int incell_r=0;incell_r<Nppc_r;incell_r++){
+            rp = rmin + (0.5+incell_r)*dr*Lr;
+            rp_s = rp*sin_th;
+            rp_c = rp*cos_th;
+            for (int incell_x=0;incell_x<Nppc_x;incell_x++){
+              x[ip] = xmin + (0.5+incell_x)*dx*Lx;
+              y[ip] = rp_s;
+              z[ip] = rp_c;
+              w[ip] = rp;
+              ip += 1;
+            }}}
+  }
+}
+
 
 // Copy sorted particle data of double-type to a new array
 __kernel void data_align_dbl(
@@ -52,8 +109,8 @@ __kernel void index_and_sum_in_cell(
    {
     double r;
     int ix,ir;
-    uint Nx_loc = *Nx-1;
-    uint Nr_loc = *Nr-1;
+    int Nx_loc = (int) *Nx-1;
+    int Nr_loc = (int) *Nr-1;
 
     r = sqrt(y[ip]*y[ip]+z[ip]*z[ip]);
 
@@ -132,7 +189,6 @@ __kernel void push_p_boris(
     py[ip] = u_p[1];
     pz[ip] = u_p[2];
     g_inv[ip] = 1./g_p;
-
     }
 }
 
@@ -145,79 +201,20 @@ __kernel void push_xyz(
   __global double *py,
   __global double *pz,
   __global double *g_inv,
-  __constant double *dt_2,
+  __constant double *dt,
   __constant uint *num_p)
 {
   uint ip = get_global_id(0);
   if (ip < *num_p)
    {
-    double dt_2_g = (*dt_2) * g_inv[ip];
+    double dt_g = (*dt) * g_inv[ip];
 
-    double dx = px[ip] * dt_2_g;
-    double dy = py[ip] * dt_2_g;
-    double dz = pz[ip] * dt_2_g;
+    double dx = px[ip] * dt_g;
+    double dy = py[ip] * dt_g;
+    double dz = pz[ip] * dt_g;
 
     x[ip] += dx;
     y[ip] += dy;
     z[ip] += dz;
-   }
-}
-
-
-////////////////////////////////////////////////////////////////////
-///////////////////TEST KERNELS ////////////////////////////////////
-////////////////////////////////////////////////////////////////////
-
-// Copy sorted particle data of double-type to a new array
-// using the shared memory: no speed-up expected, just to see how it works
-__kernel void data_align_dbl_tst(
-  __global double *x,
-  __global double *x_new,
-  __global uint *sorted_indx,
-  uint num_p)
-{
-  __local double x_loc[BLOCK_SIZE];
-
-  int base_idx = get_group_id(0)*BLOCK_SIZE;
-  int ip_loc = get_local_id(0);
-  int ip_glob = base_idx + ip_loc;
-
-  if (ip_glob < num_p)
-  {
-    x_loc[ip_loc] = x[sorted_indx[ip_glob]];
-    x_new[ip_glob] = x_loc[ip_loc];
-  }
-}
-
-// Another sorting kernel -- something is wrong
-__kernel void index_compare_sort(
-  __global uint *sorting_index,
-  __global uint *sum_out,
-  __global uint *new_indx_in_cell,
-  __global uint *new_cell_offset,
-  __global uint *sum_in_cell,
-  __constant uint *Nxm1Nrm1,
-  __constant uint *Np)
-{
-  uint ip = get_global_id(0);
-
-  if (ip < *Np)
-   {
-    uint new_i_cell = new_indx_in_cell[ip];
-    uint new_offset_end = new_cell_offset[*Nxm1Nrm1];
-    uint indx_loc;
-    uint new_offset_loc;
-
-    if (new_i_cell<*Nxm1Nrm1)
-     {
-      new_offset_loc = new_cell_offset[new_i_cell];
-      indx_loc = atom_add(&sum_in_cell[new_i_cell],1U);
-      sorting_index[ip] = new_offset_loc + indx_loc;
-     }
-    else
-     {
-      indx_loc = atom_add(&*sum_out, 1U);
-      sorting_index[ip] = new_offset_end + indx_loc;
-     }
    }
 }

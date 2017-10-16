@@ -10,23 +10,24 @@ def run_test(dims=(1024,256),Np=2e6,answers=[],verb=False,
              aligned=False, Nint = 100, Nheatup = 10):
     comm = Communicator(answers=answers)
     grid_in = {
-        'Xmin':-1.,'Xmax':1.,'Nx':1024,
-        'Rmin':0,'Rmax':1.,'Nr':200,
+        'Xmin':-1., 'Xmax':1., 'Nx':1024,
+        'Rmin':0, 'Rmax':1., 'Nr':200,
         'M':0}
 
     parts = Particles(grid_in,comm)
     grid = Grid(grid_in,comm)
 
-    beam_in = {'Np':int(7*10**6),
-               'x_c':0.,'Lx':0.3,
-               'y_c':0.2,'Ly':0.3,
-               'z_c':0.,'Lz':0.3,
-               'px_c':0.,'dpx':0.,
-               'py_c':1.,'dpy':0.,
-               'pz_c':0.,'dpz':0.,
+    parts_in = {'Type':'beam',
+               'Np':int(7*10**6),
+               'x_c':0.0, 'Lx':0.3,
+               'y_c':0.2, 'Ly':0.3,
+               'z_c':0.0, 'Lz':0.3,
+               'px_c':0., 'dpx':0.,
+               'py_c':1., 'dpy':0.,
+               'pz_c':0., 'dpz':0.,
               }
 
-    parts.make_parts(beam_in)
+    parts.make_parts(parts_in=parts_in)
     parts.sort_parts(grid=grid)
     parts.align_parts()
 

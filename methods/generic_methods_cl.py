@@ -128,6 +128,7 @@ class Communicator:
         else:
             self.dot_method = 'Reikna'
 
+#        self.sort_method = 'NumPy'
         self.sort_method = 'Radix'
 
 

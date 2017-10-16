@@ -51,8 +51,9 @@ def run_test(answers=[],verb=False):
     err2 = np.abs(veloc_num-veloc_theory).mean()/veloc_theory
 
     if verb:
-        print("""Error in laser centroid velocity is {:g} %
-and one in on-axis group velocity is {:g} %""".
+        print("""Deviation from theory in laser 
+    centroid velocity is {:g} %
+    on-axis group velocity is {:g} %""".
                format(err1*100,err2*100,) )
     return err1+err2
 

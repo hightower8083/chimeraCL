@@ -19,7 +19,8 @@ def run_test(dims=(1024,256),Np=3e6,answers=[],verb=False,
     parts = Particles(grid_in,comm)
     grid = Grid(grid_in,comm)
 
-    beam_in = {'Np':int(Np),
+    beam_in = {'Type':'beam',
+               'Np':int(Np),
                'x_c':0.,'Lx':0.2,
                'y_c':0.,'Ly':0.2,
                'z_c':0.,'Lz':0.2,

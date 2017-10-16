@@ -61,7 +61,6 @@ class Solver(Grid, Transformer,SolverMethodsCL):
         self.DataDev['Ez_fb_m0'][:] = EE
         self.DataDev['Gz_fb_m0'][:] = GG
 
-
     def _make_ms_coefficients(self):
         for m in range(self.Args['M']+1):
             mstr = '_m'+str(m)
