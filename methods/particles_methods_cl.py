@@ -42,20 +42,74 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._push_p_boris_knl = prg.push_p_boris
         self._fill_grid_knl = prg.fill_grid
 
-    def prepare_generator_data(self):
-        x_cell_grid, r_cell_grid, theta_cell_grid = \
-            np.mgrid[0:1:1./self.Args['Nppc'][0],
-                     0:1:1./self.Args['Nppc'][1],
-                     0:1:1./self.Args['Nppc'][2]]
+    def make_parts(self, parts_in):
+        args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w',
+                      'Ex', 'Ey', 'Ez','Bx', 'By', 'Bz']
 
-        x_cell_grid += 0.5/self.Args['Nppc'][0]
-        r_cell_grid += 0.5/self.Args['Nppc'][1]
-        theta_cell_grid *= 2*np.pi
+        if parts_in['Type']=='beam':
+            Np = parts_in['Np']
 
-        self.DataDev['cell_xrt'] = \
-            [to_device(self.queue,x_cell_grid.flatten()),
-             to_device(self.queue,r_cell_grid.flatten()),
-             to_device(self.queue,theta_cell_grid.flatten())]
+            for arg in args_strs:
+                self.DataDev[arg] = self.dev_arr(shape=Np, dtype=np.double)
+
+            for arg in ['x', 'y', 'z']:
+                self._fill_arr_randn(self.DataDev[arg],
+                                    mu=parts_in[arg+'_c'],
+                                    sigma=parts_in['L'+arg])
+
+            self.DataDev['w'][:] = self.Args['q']
+        elif parts_in['Type']=='domain':
+            xmin, xmax, dx, rmin, rmax, dr = \
+              [parts_in[arg] for arg in ['xmin', 'xmax', 'dx',
+                                       'rmin', 'rmax', 'dr']]
+            Nx_loc = int(np.ceil((xmax-xmin) / dx))+1
+            Nr_loc = int(np.ceil((rmax-rmin) / dr))+1
+            Xgrid_loc = self.dev_arr(val = xmin+dx*np.arange(Nx_loc))
+            Rgrid_loc = self.dev_arr(val = rmin+dr*np.arange(Nr_loc))
+
+            Ncells_loc = (Nx_loc-1)*(Nr_loc-1)
+            Np = int(Ncells_loc*np.prod(self.Args['Nppc']))
+
+            for arg in args_strs:
+                self.DataDev[arg] = self.dev_arr(shape=Np, dtype=np.double)
+
+            self.DataDev['theta_variator'] = self.dev_arr(shape=Ncells_loc,
+                                                          dtype=np.double)
+            self._fill_arr_rand(self.DataDev['theta_variator'],
+                               xmin=0, xmax=2*np.pi)
+
+            gnrtr_strs = ['x', 'y', 'z', 'w', 'theta_variator']
+            gnrtr_args = [self.DataDev[arg].data for arg in gnrtr_strs]
+            gnrtr_args += [Xgrid_loc.data, Rgrid_loc.data,
+                           np.uint32(Nx_loc), np.uint32(Ncells_loc)]
+            gnrtr_args += list(np.array(self.Args['Nppc'],dtype=np.uint32))
+
+            WGS, WGS_tot = self.get_wgs(Ncells_loc)
+
+            self._fill_grid_knl(self.queue, (WGS_tot, ),
+                                (WGS, ), *gnrtr_args).wait()
+        else:
+            print("Specify species Type as beam or domain")
+
+
+        for arg in ['px', 'py', 'pz']:
+            self._fill_arr_randn(self.DataDev[arg],
+                                mu=parts_in[arg+'_c'],
+                                sigma=parts_in['d'+arg])
+
+        self.DataDev['g_inv'] = 1./sqrt(
+            1 + self.DataDev['px']*self.DataDev['px']
+            + self.DataDev['py']*self.DataDev['py']
+            + self.DataDev['pz']*self.DataDev['pz'])
+
+        self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
+                                                    shape=Np)
+        self.reset_num_parts()
+
+    def reset_num_parts(self):
+        Np = self.DataDev['x'].size
+        self.DataDev['Np'].fill(Np)
+        self.Args['Np'] = Np
 
     def push_coords(self, mode='half'):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
@@ -132,80 +186,11 @@ class ParticleMethodsCL(GenericMethodsCL):
         self.DataDev['sort_indx'] = arange(self.queue, 0, self.Args['Np'], 1,
                                            dtype=np.uint32)
 
-    def make_parts(self, parts_in):
-        args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w',
-                      'Ex', 'Ey', 'Ez','Bx', 'By', 'Bz']
-
-        if parts_in['Type']=='beam':
-            Np = parts_in['Np']
-
-            for arg in args_strs:
-                self.DataDev[arg] = self.dev_arr(shape=Np, dtype=np.double)
-
-            for arg in ['x', 'y', 'z']:
-                self.fill_arr_randn(self.DataDev[arg],
-                                    mu=parts_in[arg+'_c'],
-                                    sigma=parts_in['L'+arg])
-
-            self.DataDev['w'][:] = self.Args['q']
-        elif parts_in['Type']=='domain':
-            xmin, xmax, dx, rmin, rmax, dr = \
-              [parts_in[arg] for arg in ['xmin', 'xmax', 'dx',
-                                       'rmin', 'rmax', 'dr']]
-            Nx_loc = int(np.ceil((xmax-xmin) / dx))+1
-            Nr_loc = int(np.ceil((rmax-rmin) / dr))+1
-            Xgrid_loc = self.dev_arr(val = xmin+dx*np.arange(Nx_loc))
-            Rgrid_loc = self.dev_arr(val = rmin+dr*np.arange(Nr_loc))
-
-            Ncells_loc = (Nx_loc-1)*(Nr_loc-1)
-            Np = int(Ncells_loc*np.prod(self.Args['Nppc']))
-
-            for arg in args_strs:
-                self.DataDev[arg] = self.dev_arr(shape=Np, dtype=np.double)
-
-            self.DataDev['theta_variator'] = self.dev_arr(shape=Ncells_loc,
-                                                          dtype=np.double)
-            self.fill_arr_rand(self.DataDev['theta_variator'],
-                               xmin=0, xmax=2*np.pi)
-
-            gnrtr_strs = ['x', 'y', 'z', 'w', 'theta_variator']
-            gnrtr_args = [self.DataDev[arg].data for arg in gnrtr_strs]
-            gnrtr_args += [Xgrid_loc.data, Rgrid_loc.data,
-                           np.uint32(Nx_loc), np.uint32(Ncells_loc)]
-            gnrtr_args += list(np.array(self.Args['Nppc'],dtype=np.uint32))
-
-            WGS, WGS_tot = self.get_wgs(Ncells_loc)
-
-            self._fill_grid_knl(self.queue, (WGS_tot, ),
-                                (WGS, ), *gnrtr_args).wait()
-        else:
-            print("Specify species Type as beam or domain")
-
-
-        for arg in ['px', 'py', 'pz']:
-            self.fill_arr_randn(self.DataDev[arg],
-                                mu=parts_in[arg+'_c'],
-                                sigma=parts_in['d'+arg])
-
-        self.DataDev['g_inv'] = 1./sqrt(
-            1 + self.DataDev['px']*self.DataDev['px']
-            + self.DataDev['py']*self.DataDev['py']
-            + self.DataDev['pz']*self.DataDev['pz'])
-
-        self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
-                                                    shape=Np)
-        self.reset_num_parts()
-
-    def reset_num_parts(self):
-        Np = self.DataDev['x'].size
-        self.DataDev['Np'].fill(Np)
-        self.Args['Np'] = Np
-
-    def fill_arr_randn(self, arr, mu=0, sigma=1):
+    def _fill_arr_randn(self, arr, mu=0, sigma=1):
         return self._generator_knl.fill_normal(ary=arr, queue=self.queue,
                                                mu=mu, sigma=sigma)
 
-    def fill_arr_rand(self, arr, xmin=0, xmax=1):
+    def _fill_arr_rand(self, arr, xmin=0, xmax=1):
         return self._generator_knl.fill_uniform(ary=arr, queue=self.queue,
                                                 a=xmin,b=xmax)
 
@@ -216,3 +201,4 @@ class ParticleMethodsCL(GenericMethodsCL):
         evnt.wait()
         arr_out[1:] = arr_tmp[:]
         return arr_out
+

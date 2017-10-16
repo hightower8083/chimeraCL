@@ -14,9 +14,6 @@ class Particles(ParticleMethodsCL):
         self.init_particle_methods()
         self._process_configs(configs_in)
 
-        if self.Args['Nppc'] is not None:
-            self.prepare_generator_data()
-
         self.send_args_to_dev()
 
     def sort_parts(self, grid):
@@ -48,3 +45,9 @@ class Particles(ParticleMethodsCL):
 
         self.Args['dt_2'] = 0.5*self.Args['dt']
         self.Args['dt_inv'] = 1./self.Args['dt']
+
+        args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w',
+                      'Ex', 'Ey', 'Ez','Bx', 'By', 'Bz']
+
+        for arg in args_strs:
+            self.DataDev[arg] = self.dev_arr(shape=0, dtype=np.double)
