@@ -17,17 +17,15 @@ def run_test(dims=(1024,256),Np=2e6,answers=[],verb=False,
     parts = Particles(grid_in,comm)
     grid = Grid(grid_in,comm)
 
-    parts_in = {'Type':'beam',
-               'Np':int(7*10**6),
-               'x_c':0., 'Lx':0.3,
-               'y_c':0., 'Ly':0.3,
-               'z_c':0., 'Lz':0.3,
-               'px_c':0., 'dpx':0.,
-               'py_c':1., 'dpy':0.,
-               'pz_c':0., 'dpz':0.,
-              }
+    parts_in = {'Np':int(7*10**6),
+                'x_c':0., 'Lx':0.3,
+                'y_c':0., 'Ly':0.3,
+                'z_c':0., 'Lz':0.3,
+                'px_c':0., 'dpx':0.,
+                'py_c':1., 'dpy':0.,
+                'pz_c':0., 'dpz':0. }
 
-    parts.make_parts(parts_in)
+    parts.add_particles(beam_in=parts_in)
     parts.sort_parts(grid=grid)
     parts.align_parts()
 

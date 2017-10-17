@@ -27,8 +27,8 @@ class GridMethodsCL(GenericMethodsCL):
         prg = Program(self.ctx, grid_sources).\
             build(options=compiler_options)
 
-        self._divide_by_r_dbl_knl = prg.divide_by_r_dbl
-        self._divide_by_r_clx_knl = prg.divide_by_r_clx
+        self._divide_by_dv_dbl_knl = prg.divide_by_dv_dbl
+        self._divide_by_dv_clx_knl = prg.divide_by_dv_clx
         self._treat_axis_dbl_knl = prg.treat_axis_dbl
         self._treat_axis_clx_knl = prg.treat_axis_clx
 
@@ -39,6 +39,9 @@ class GridMethodsCL(GenericMethodsCL):
 
     def depose_scalar(self, parts, sclr, fld):
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr_4'])
+
+        if parts.Args['Np'] <= 0:
+            return
 
         part_str = ['sort_indx','x','y','z',
                      sclr,'cell_offset',]
@@ -77,15 +80,15 @@ class GridMethodsCL(GenericMethodsCL):
                                      args_grid[m], np.uint32(self.Args['Nx']))
         # Divide by radius
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr'])
-        grid_str =  ['NxNr','Nx','Rgrid_inv']
+        grid_str =  ['NxNr','Nx','dV_inv']
         grid_args = [self.DataDev[arg].data for arg in grid_str]
 
         enqueue_barrier(self.queue)
-        self._divide_by_r_dbl_knl(self.queue,(WGS_tot,), (WGS,),
+        self._divide_by_dv_dbl_knl(self.queue,(WGS_tot,), (WGS,),
                              args_grid[0],*grid_args)
 
         for m in range(1,self.Args['M']+1):
-            self._divide_by_r_clx_knl(self.queue,(WGS_tot,), (WGS,),
+            self._divide_by_dv_clx_knl(self.queue,(WGS_tot,), (WGS,),
                                  args_grid[m],*grid_args)
         enqueue_barrier(self.queue)
 
@@ -156,11 +159,11 @@ class GridMethodsCL(GenericMethodsCL):
             # Divide by radius
             WGS, WGS_tot = self.get_wgs(self.Args['NxNr'])
             enqueue_barrier(self.queue)
-            self._divide_by_r_dbl_knl(self.queue, (WGS_tot, ), (WGS, ),
+            self._divide_by_dv_dbl_knl(self.queue, (WGS_tot, ), (WGS, ),
                                       args_fld[0], *args_raddiv)
 
             for m in range(1,self.Args['M']+1):
-                self._divide_by_r_clx_knl(self.queue,(WGS_tot, ), (WGS, ),
+                self._divide_by_dv_clx_knl(self.queue,(WGS_tot, ), (WGS, ),
                                           args_fld[m], *args_raddiv)
             enqueue_barrier(self.queue)
 

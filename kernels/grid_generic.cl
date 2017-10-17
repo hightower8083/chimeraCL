@@ -4,35 +4,35 @@
 //#include <pyopencl-complex.h>
 
 // Divide double type 2D array by R along 0-th axis
-__kernel void divide_by_r_dbl(
+__kernel void divide_by_dv_dbl(
   __global double *arr,
   __constant uint *NxNr,
   __constant uint *Nx,
-  __global double *r_inv)
+  __global double *dv_inv)
 {
   uint i_cell = get_global_id(0);
   if (i_cell < *NxNr)
    {
     uint Nx_loc = *Nx;
     uint ir = i_cell/Nx_loc;
-    arr[i_cell] *= r_inv[ir];
+    arr[i_cell] *= dv_inv[ir];
    }
 }
 
 // Divide complex type 2D array by R along 0-th axis
-__kernel void divide_by_r_clx(
+__kernel void divide_by_dv_clx(
   __global double2 *arr,
   __constant uint *NxNr,
   __constant uint *Nx,
-  __global double *r_inv)
+  __global double *dv_inv)
 {
   uint i_cell = get_global_id(0);
   if (i_cell < *NxNr)
    {
     uint Nx_loc = *Nx;
     uint ir = i_cell/Nx_loc ;
-    arr[i_cell].s0 *= r_inv[ir];
-    arr[i_cell].s1 *= r_inv[ir];
+    arr[i_cell].s0 *= dv_inv[ir];
+    arr[i_cell].s1 *= dv_inv[ir];
    }
 }
 

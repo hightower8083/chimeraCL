@@ -42,69 +42,89 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._push_p_boris_knl = prg.push_p_boris
         self._fill_grid_knl = prg.fill_grid
 
-    def make_parts(self, parts_in):
-        args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w',
-                      'Ex', 'Ey', 'Ez','Bx', 'By', 'Bz']
+    def add_new_particles(self):
+        args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w', 'g_inv']
+        old_Np = self.DataDev['x'].size
+        new_Np = self.DataDev['x_new'].size
+        full_Np = old_Np + new_Np
+        for arg in args_strs:
+            buff = self.dev_arr(dtype=self.DataDev[arg].dtype,
+                                shape=full_Np)
+            buff[:old_Np] = self.DataDev[arg]
+            buff[old_Np:] = self.DataDev[arg+'_new']
+            self.DataDev[arg] = buff
+            self.DataDev[arg+'_new'] = None
+        self.reset_num_parts()
 
-        if parts_in['Type']=='beam':
-            Np = parts_in['Np']
+    def make_new_domain(self, parts_in):
+        args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w']
 
-            for arg in args_strs:
-                self.DataDev[arg] = self.dev_arr(shape=Np, dtype=np.double)
+        xmin, xmax, rmin, rmax = \
+          [parts_in[arg] for arg in ['xmin', 'xmax', 'rmin', 'rmax']]
+        Nx_loc = int( round((xmax-xmin) / self.Args['dx']) + 1)
+        Nr_loc = int( round((rmax-rmin) / self.Args['dr']) + 1)
+        Xgrid_loc = self.dev_arr(val = xmin+self.Args['dx']*np.arange(Nx_loc))
+        Rgrid_loc = self.dev_arr(val = rmin+self.Args['dr']*np.arange(Nr_loc))
 
-            for arg in ['x', 'y', 'z']:
-                self._fill_arr_randn(self.DataDev[arg],
-                                    mu=parts_in[arg+'_c'],
-                                    sigma=parts_in['L'+arg])
+        self.Args['right_lim'] = Xgrid_loc[-1].get()
 
-            self.DataDev['w'][:] = self.Args['q']
-        elif parts_in['Type']=='domain':
-            xmin, xmax, dx, rmin, rmax, dr = \
-              [parts_in[arg] for arg in ['xmin', 'xmax', 'dx',
-                                       'rmin', 'rmax', 'dr']]
-            Nx_loc = int(np.ceil((xmax-xmin) / dx))+1
-            Nr_loc = int(np.ceil((rmax-rmin) / dr))+1
-            Xgrid_loc = self.dev_arr(val = xmin+dx*np.arange(Nx_loc))
-            Rgrid_loc = self.dev_arr(val = rmin+dr*np.arange(Nr_loc))
+        Ncells_loc = (Nx_loc-1)*(Nr_loc-1)
+        Np = int(Ncells_loc*np.prod(self.Args['Nppc']))
 
-            Ncells_loc = (Nx_loc-1)*(Nr_loc-1)
-            Np = int(Ncells_loc*np.prod(self.Args['Nppc']))
+        for arg in args_strs:
+            self.DataDev[arg+'_new'] = self.dev_arr(
+                shape=Np, dtype=np.double)
 
-            for arg in args_strs:
-                self.DataDev[arg] = self.dev_arr(shape=Np, dtype=np.double)
-
-            self.DataDev['theta_variator'] = self.dev_arr(shape=Ncells_loc,
+        self.DataDev['theta_variator_new'] = self.dev_arr(shape=Ncells_loc,
                                                           dtype=np.double)
-            self._fill_arr_rand(self.DataDev['theta_variator'],
-                               xmin=0, xmax=2*np.pi)
+        self._fill_arr_rand(self.DataDev['theta_variator_new'],
+                           xmin=0, xmax=2*np.pi)
 
-            gnrtr_strs = ['x', 'y', 'z', 'w', 'theta_variator']
-            gnrtr_args = [self.DataDev[arg].data for arg in gnrtr_strs]
-            gnrtr_args += [Xgrid_loc.data, Rgrid_loc.data,
-                           np.uint32(Nx_loc), np.uint32(Ncells_loc)]
-            gnrtr_args += list(np.array(self.Args['Nppc'],dtype=np.uint32))
+        gn_strs = ['x', 'y', 'z', 'w', 'theta_variator']
+        gn_args = [self.DataDev[arg+'_new'].data for arg in gn_strs]
+        gn_args += [Xgrid_loc.data, Rgrid_loc.data,
+                    np.uint32(Nx_loc), np.uint32(Ncells_loc)]
+        gn_args += list(np.array(self.Args['Nppc'],dtype=np.uint32))
 
-            WGS, WGS_tot = self.get_wgs(Ncells_loc)
+        WGS, WGS_tot = self.get_wgs(Ncells_loc)
+        self._fill_grid_knl(self.queue, (WGS_tot, ), (WGS, ), *gn_args).wait()
 
-            self._fill_grid_knl(self.queue, (WGS_tot, ),
-                                (WGS, ), *gnrtr_args).wait()
-        else:
-            print("Specify species Type as beam or domain")
-
+        self.DataDev['w_new'] *= self.Args['w0']
 
         for arg in ['px', 'py', 'pz']:
-            self._fill_arr_randn(self.DataDev[arg],
+            self._fill_arr_randn(self.DataDev[arg+'_new'],
                                 mu=parts_in[arg+'_c'],
                                 sigma=parts_in['d'+arg])
 
-        self.DataDev['g_inv'] = 1./sqrt(
-            1 + self.DataDev['px']*self.DataDev['px']
-            + self.DataDev['py']*self.DataDev['py']
-            + self.DataDev['pz']*self.DataDev['pz'])
+        self.DataDev['g_inv_new'] = 1./sqrt(
+            1 + self.DataDev['px_new']*self.DataDev['px_new']
+            + self.DataDev['py_new']*self.DataDev['py_new']
+            + self.DataDev['pz_new']*self.DataDev['pz_new'])
 
-        self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
-                                                    shape=Np)
-        self.reset_num_parts()
+    def make_new_beam(self, parts_in):
+        Np = parts_in['Np']
+
+        args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w']
+        for arg in args_strs:
+            self.DataDev[arg+'_new'] = self.dev_arr(
+                shape=Np, dtype=np.double)
+
+        for arg in ['x', 'y', 'z']:
+            self._fill_arr_randn(self.DataDev[arg+'_new'],
+                                mu=parts_in[arg+'_c'],
+                                sigma=parts_in['L'+arg])
+
+        for arg in ['px', 'py', 'pz']:
+            self._fill_arr_randn(self.DataDev[arg+'_new'],
+                                mu=parts_in[arg+'_c'],
+                                sigma=parts_in['d'+arg])
+
+        self.DataDev['w_new'][:] = self.Args['q']
+
+        self.DataDev['g_inv_new'] = 1./sqrt(
+            1 + self.DataDev['px_new']*self.DataDev['px_new']
+            + self.DataDev['py_new']*self.DataDev['py_new']
+            + self.DataDev['pz_new']*self.DataDev['pz_new'])
 
     def reset_num_parts(self):
         Np = self.DataDev['x'].size
@@ -123,6 +143,8 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._push_xyz_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
 
     def push_veloc(self):
+        if self.Args['Np'] <= 0:
+            return
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
         args_strs =  ['px','py','pz','g_inv',
@@ -134,6 +156,9 @@ class ParticleMethodsCL(GenericMethodsCL):
 
     def index_and_sum(self, grid):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
+
+        self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
+                                                    shape=self.Args['Np'])
 
         self.DataDev['cell_offset'] = self.dev_arr(val=0, dtype=np.uint32,
                                                    shape=grid.Args['Nxm1Nrm1'])
@@ -148,6 +173,11 @@ class ParticleMethodsCL(GenericMethodsCL):
                     [grid.DataDev[arg].data for arg in grid_strs]
         self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
         self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'])
+
+        if grid.Args['Xgrid'][-1] < self.Args['right_lim']:
+            ip_last = int((self.Args['right_lim']-grid.Args['Xgrid'][-1]) \
+                      / self.Args['ddx']-0.5) + 1
+            self.Args['right_lim'] -= self.Args['ddx']*ip_last
 
     def index_sort(self):
         if self.comm.sort_method == 'Radix':
@@ -176,7 +206,6 @@ class ParticleMethodsCL(GenericMethodsCL):
                                      self.DataDev[comp].data, buff.data,
                                      self.DataDev['sort_indx'].data,
                                      np.uint32(num_staying)).wait()
-
             self.DataDev[comp] = buff
 
         for comp in comps_simple_dump:
@@ -201,4 +230,3 @@ class ParticleMethodsCL(GenericMethodsCL):
         evnt.wait()
         arr_out[1:] = arr_tmp[:]
         return arr_out
-

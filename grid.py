@@ -37,8 +37,8 @@ class Grid(GridMethodsCL):
     def project_fields(self, species=[]):
         for parts in species:
             for arg in ['Ex', 'Ey', 'Ez', 'Bx', 'By', 'Bz']:
-                self.set_to_zero(parts.DataDev[arg])
-
+                parts.DataDev[arg] = self.dev_arr(val=0, dtype=np.double,
+                                                  shape=parts.Args['Np'])
             self.project_vec6(parts, ['E', 'B'], ['E', 'B'])
 
     def _process_configs(self, configs_in):
@@ -66,7 +66,10 @@ class Grid(GridMethodsCL):
             np.arange(self.Args['Nr'])
         self.Args['Rmax'] = self.Args['Rgrid'].max()
 
-        self.Args['Rgrid_inv'] = (self.Args['Rgrid'] > 0) / self.Args['Rgrid']
+        self.Args['dV_inv'] = (self.Args['Rgrid'] > 0) \
+                              / (2*np.pi*self.Args['dx']*self.Args['dr']\
+                                 *self.Args['Rgrid'] )
+
         self.Args['R_period'] = self.Args['Rmax'] + self.Args['dr']
 
         self.Args['NxNr'] = self.Args['Nr'] * self.Args['Nx']
