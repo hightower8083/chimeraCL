@@ -64,7 +64,6 @@ class Particles(ParticleMethodsCL):
                               / np.prod(self.Args['Nppc'])
             self.Args['ddx'] = self.Args['dx']/self.Args['Nppc'][0]
         else:
-            self.Args['w0'] = self.Args['charge']/self.Args['Np']
             self.Args['ddx'] = 1
 
         self.Args['right_lim'] = 0.0

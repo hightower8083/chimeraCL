@@ -127,11 +127,16 @@ class ParticleMethodsCL(GenericMethodsCL):
                                 sigma=parts_in['L'+arg])
 
         for arg in ['px', 'py', 'pz']:
+            if arg+'_c' not in parts_in:
+                parts_in[arg+'_c'] = 0
+            if 'd'+arg not in parts_in:
+                parts_in['d'+arg] = 0
+
             self._fill_arr_randn(self.DataDev[arg+'_new'],
                                 mu=parts_in[arg+'_c'],
                                 sigma=parts_in['d'+arg])
 
-        self.DataDev['w_new'][:] = self.Args['w0']
+        self.DataDev['w_new'][:] = parts_in['FullCharge']/parts_in['Np']
 
         self.DataDev['g_inv_new'] = 1./sqrt(
             1 + self.DataDev['px_new']*self.DataDev['px_new']
