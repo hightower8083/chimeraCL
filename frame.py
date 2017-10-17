@@ -17,7 +17,7 @@ class Frame():
         if 'dt' not in self.Args:
             self.Args['dt'] = 1
 
-    def shift(self, species=[], grids=[], steps=None):
+    def shift_grids(self, grids=[], steps=None):
         if steps is None:
             steps = self.Args['Steps']
         x_shift = steps * self.Args['dt'] * self.Args['Velocity']
@@ -27,8 +27,18 @@ class Frame():
                 for arg in ['Xmax','Xmin','Xgrid']:
                     store[arg] += x_shift
 
+    def inject_plasma(self, species=[], grid=None, steps=None):
+        if steps is None:
+            steps = self.Args['Steps']
+        x_shift = steps * self.Args['dt'] * self.Args['Velocity']
+
         for specie in species:
-            if specie.Args['Np']==0:
-                return
-            specie.sort_parts(grid=grids[0])
-            specie.align_parts()
+            if specie.Args['Np'] == 0:
+                specie.Args['right_lim'] = grid.Args['Xmax'] - x_shift
+
+            inject_domain = {}
+            inject_domain['Xmin'] = specie.Args['right_lim']
+            inject_domain['Xmax'] = inject_domain['Xmin'] + x_shift
+            inject_domain['Rmin'] = grid.Args['Rmin']
+            inject_domain['Rmax'] = grid.Args['Rmax']
+            specie.add_particles(domain_in=inject_domain)

@@ -56,18 +56,18 @@ class Particles(ParticleMethodsCL):
         if 'dens' not in self.Args:
             self.Args['dens'] = 1.
 
-        if 'Nppc' not in self.Args:
-            self.Args['Nppc'] = (2,2,4)
+        if 'Nppc' in self.Args:
+            self.Args['Nppc'] = np.array(self.Args['Nppc'],dtype=np.uint32)
 
-        self.Args['Nppc'] = np.array(self.Args['Nppc'],dtype=np.uint32)
-
-        self.Args['w0'] = 2 * np.pi * self.Args['dx'] * self.Args['dr'] \
-                          * self.Args['charge'] * self.Args['dens'] \
-                          / np.prod(self.Args['Nppc'])
-
-        if 'dx' in self.Args:
-            self.Args['right_lim'] = 0.0
+            self.Args['w0'] = 2 * np.pi * self.Args['dx'] * self.Args['dr'] \
+                              * self.Args['charge'] * self.Args['dens'] \
+                              / np.prod(self.Args['Nppc'])
             self.Args['ddx'] = self.Args['dx']/self.Args['Nppc'][0]
+        else:
+            self.Args['w0'] = self.Args['charge']/self.Args['Np']
+            self.Args['ddx'] = 1
+
+        self.Args['right_lim'] = 0.0
 
         self.Args['dt_2'] = 0.5*self.Args['dt']
         self.Args['dt_inv'] = 1./self.Args['dt']

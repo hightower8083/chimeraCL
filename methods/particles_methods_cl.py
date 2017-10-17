@@ -60,7 +60,7 @@ class ParticleMethodsCL(GenericMethodsCL):
         args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w']
 
         xmin, xmax, rmin, rmax = \
-          [parts_in[arg] for arg in ['xmin', 'xmax', 'rmin', 'rmax']]
+          [parts_in[arg] for arg in ['Xmin', 'Xmax', 'Rmin', 'Rmax']]
         Nx_loc = int( round((xmax-xmin) / self.Args['dx']) + 1)
         Nr_loc = int( round((rmax-rmin) / self.Args['dr']) + 1)
         Xgrid_loc = self.dev_arr(val = xmin+self.Args['dx']*np.arange(Nx_loc))
@@ -92,14 +92,26 @@ class ParticleMethodsCL(GenericMethodsCL):
         self.DataDev['w_new'] *= self.Args['w0']
 
         for arg in ['px', 'py', 'pz']:
-            self._fill_arr_randn(self.DataDev[arg+'_new'],
-                                mu=parts_in[arg+'_c'],
-                                sigma=parts_in['d'+arg])
+            if ('d'+arg in parts_in):
+                self._fill_arr_randn(self.DataDev[arg+'_new'],
+                                    mu=parts_in[arg+'_c'],
+                                    sigma=parts_in['d'+arg])
+            else:
+                if arg+'_c' not in parts_in:
+                    parts_in[arg+'_c'] = 0
+                self.DataDev[arg+'_new'].fill(parts_in[arg+'_c'])
 
-        self.DataDev['g_inv_new'] = 1./sqrt(
-            1 + self.DataDev['px_new']*self.DataDev['px_new']
-            + self.DataDev['py_new']*self.DataDev['py_new']
-            + self.DataDev['pz_new']*self.DataDev['pz_new'])
+        if (parts_in['px_c'] != 0) and (parts_in['dpx'] != 0) and \
+          (parts_in['py_c'] != 0) and (parts_in['dpy'] != 0) and \
+          (parts_in['pz_c'] != 0) and (parts_in['dpz'] != 0):
+
+            self.DataDev['g_inv_new'] = 1./sqrt(
+                1 + self.DataDev['px_new']*self.DataDev['px_new']
+                + self.DataDev['py_new']*self.DataDev['py_new']
+                + self.DataDev['pz_new']*self.DataDev['pz_new'])
+        else:
+            self.DataDev['g_inv_new'] = self.dev_arr(shape=Np,val=1.0,
+                                                     dtype=np.double)
 
     def make_new_beam(self, parts_in):
         Np = parts_in['Np']
@@ -119,7 +131,7 @@ class ParticleMethodsCL(GenericMethodsCL):
                                 mu=parts_in[arg+'_c'],
                                 sigma=parts_in['d'+arg])
 
-        self.DataDev['w_new'][:] = self.Args['q']
+        self.DataDev['w_new'][:] = self.Args['w0']
 
         self.DataDev['g_inv_new'] = 1./sqrt(
             1 + self.DataDev['px_new']*self.DataDev['px_new']
@@ -174,9 +186,9 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
         self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'])
 
-        if grid.Args['Xgrid'][-1] < self.Args['right_lim']:
-            ip_last = int((self.Args['right_lim']-grid.Args['Xgrid'][-1]) \
-                      / self.Args['ddx']-0.5) + 1
+        if self.Args['right_lim'] > grid.Args['Xgrid'][-1]:
+            dL = self.Args['right_lim']-grid.Args['Xgrid'][-1]
+            ip_last = int(dL/self.Args['ddx'] - 0.5) + 1
             self.Args['right_lim'] -= self.Args['ddx']*ip_last
 
     def index_sort(self):
@@ -198,6 +210,14 @@ class ParticleMethodsCL(GenericMethodsCL):
     def align_and_damp(self, comps_align, comps_simple_dump):
         num_staying = self.DataDev['cell_offset'][-1].get().item()
 
+        if num_staying == 0:
+            for comp in comps_align+comps_simple_dump:
+                self.DataDev[comp] = self.dev_arr(shape=0,
+                                        dtype=self.DataDev[comp].dtype)
+            self.DataDev['sort_indx'] = self.dev_arr(shape=0,dtype=np.uint32)
+            self.reset_num_parts()
+            return
+
         WGS, WGS_tot = self.get_wgs(num_staying)
         for comp in comps_align:
             buff = self.dev_arr(dtype=self.DataDev[comp].dtype,
@@ -211,9 +231,9 @@ class ParticleMethodsCL(GenericMethodsCL):
         for comp in comps_simple_dump:
             self.DataDev[comp] = self.DataDev[comp][:num_staying]
 
-        self.reset_num_parts()
-        self.DataDev['sort_indx'] = arange(self.queue, 0, self.Args['Np'], 1,
+        self.DataDev['sort_indx'] = arange(self.queue, 0, num_staying, 1,
                                            dtype=np.uint32)
+        self.reset_num_parts()
 
     def _fill_arr_randn(self, arr, mu=0, sigma=1):
         return self._generator_knl.fill_normal(ary=arr, queue=self.queue,
