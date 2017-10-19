@@ -19,15 +19,13 @@ def run_test(dims=(1024,256),Np=2e6,answers=[],verb=False,
     grid = Solver(grid_in,comm)
 
     beam_in = {'Np':int(7*10**6),
+               'FullCharge':1,
                'x_c':0.,'Lx':0.3,
                'y_c':0.2,'Ly':0.3,
                'z_c':0.2,'Lz':0.3,
-               'px_c':0.,'dpx':0.,
-               'py_c':0.,'dpy':0.,
-               'pz_c':0.,'dpz':0.,
               }
 
-    parts.make_parts(beam_in)
+    parts.add_particles(beam_in=beam_in)
     parts.sort_parts(grid=grid)
     parts.align_parts()
     grid.depose_charge([parts,])

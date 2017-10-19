@@ -139,7 +139,7 @@ class GridMethodsCL(GenericMethodsCL):
         enqueue_barrier(self.queue)
 
     def postproc_depose_vector(self,vec_fld):
-        args_raddiv_str =  ['NxNr','Nx','Rgrid_inv']
+        args_raddiv_str =  ['NxNr','Nx','dV_inv']
         args_raddiv = [self.DataDev[arg].data for arg in args_raddiv_str]
 
         for fld in [vec_fld + comp for comp in ('x','y','z')]:

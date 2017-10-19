@@ -149,6 +149,8 @@ class ParticleMethodsCL(GenericMethodsCL):
         self.Args['Np'] = Np
 
     def push_coords(self, mode='half'):
+        if self.Args['Np']==0:
+            return
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
         if mode=='half':
@@ -160,7 +162,7 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._push_xyz_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
 
     def push_veloc(self):
-        if self.Args['Np'] <= 0:
+        if self.Args['Np'] == 0:
             return
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 

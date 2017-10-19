@@ -83,8 +83,6 @@ class Grid(GridMethodsCL):
                          'Bx', 'By', 'Bz',
                          'Jx', 'Jy', 'Jz']
 
-        args_fld_aux_init = ['field_fb_aux1', 'field_fb_aux2']
-
         for arg in args_fld_init:
             arg += '_m'
             self.DataDev[arg+'0'] = self.dev_arr(
@@ -95,15 +93,3 @@ class Grid(GridMethodsCL):
                 self.DataDev[arg+str(m)] = self.dev_arr(
                     val=0, dtype=np.complex128,
                     shape=(self.Args['Nr'], self.Args['Nx']))
-
-        for arg in args_fld_aux_init:
-            arg += '_dbl'
-            self.DataDev[arg] = self.dev_arr(
-                val=0, dtype=np.double,
-                shape=(self.Args['Nr']-1, self.Args['Nx']))
-
-        for arg in args_fld_aux_init:
-            arg += '_clx'
-            self.DataDev[arg] = self.dev_arr(
-                val=0, dtype=np.complex128,
-                shape=(self.Args['Nr']-1, self.Args['Nx']))
