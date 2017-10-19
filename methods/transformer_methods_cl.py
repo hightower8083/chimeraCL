@@ -1,78 +1,154 @@
 import numpy as np
 
+from pyopencl import Program
 from pyopencl import enqueue_barrier
 from pyopencl.array  import to_device, empty_like
 from reikna.fft import FFT
 from reikna.linalg import MatrixMul
 
-class TransformerMethodsCL():
+from .generic_methods_cl import GenericMethodsCL
+from .generic_methods_cl import compiler_options
+
+from chimeraCL import __path__ as src_path
+src_path = src_path[0] + '/kernels/'
+
+
+class TransformerMethodsCL(GenericMethodsCL):
     def init_transformer_methods(self):
+        self.init_generic_methods()
+        self.set_global_working_group_size()
+
+        transformer_sources = []
+        transformer_sources.append(
+            ''.join(open(src_path+"transformer_generic.cl").readlines()) )
+
+        transformer_sources = self.block_def_str + ''.join(transformer_sources)
+
+        prg = Program(self.ctx, transformer_sources).\
+            build(options=compiler_options)
+
+        self._get_phase_plus_knl = prg.get_phase_plus
+        self._get_phase_minus_knl = prg.get_phase_minus
+        self._multiply_by_phase_knl = prg.multiply_by_phase
+
         self._prepare_fft()
         self._prepare_dot()
 
-    def transform_field(self, arg,dir):
+    def transform_field(self, arg_cmp,dir):
         if dir == 0:
             dht_arg = 'DHT_m'
-            arg_in = arg + '_m'
-            arg_out = arg + '_fb_m'
+            arg_in = arg_cmp + '_m'
+            arg_out = arg_cmp + '_fb_m'
 
-            self.DataDev['field_fb_aux1_dbl'] = self.DataDev[arg_in+'0']\
-                                                  [1:].copy()
-            self.DataDev['field_fb_aux2_dbl'] = self._dot0(
-                self.DataDev[dht_arg+'0'], self.DataDev['field_fb_aux1_dbl'])
+            # prepare the phase shift
+            phs_shft = self._get_phase(self.Args['Xmin'], dir)
+            WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
 
+            # DHT of 0 mode into a temporal array
+            buff1_dbl = self.DataDev[arg_in+'0'][1:].copy()
+            buff2_dbl = self._dot0(self.DataDev[dht_arg+'0'],buff1_dbl)
             enqueue_barrier(self.queue)
 
-            self.DataDev[arg_out+'0'][:] = self.DataDev['field_fb_aux2_dbl']\
-                                                   .astype(np.complex128)
+            # FFT of 0 mode casted to complex dtype
+            self.DataDev[arg_out+'0'][:] = buff2_dbl.astype(np.complex128)
             enqueue_barrier(self.queue)
             self.DataDev[arg_out+'0'] = self._fft(self.DataDev[arg_out+'0'],
                                                   dir=dir)
 
+            # Phase shift of the result
+            phs_str = [arg_out+'0', 'NxNrm1', 'Nx']
+            phs_args = [self.DataDev[arg].data for arg in phs_str]
+            phs_args += [phs_shft.data,]
+            self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS,),
+                                        *phs_args).wait()
+
+            # Same for m>0 modes
             for m in range(1,self.Args['M']+1):
                 arg_in_m = arg_in + str(m)
                 arg_out_m = arg_out + str(m)
 
-                self.DataDev['field_fb_aux1_clx'] = self.DataDev[arg_in_m]\
-                                                      [1:,:].copy()
+                # DHT of m mode into a temporal array
+                buff1_clx = self.DataDev[arg_in_m][1:,:].copy()
 
                 self.DataDev[arg_out_m] = self._dot1(
-                    self.DataDev[dht_arg+str(m)],
-                    self.DataDev['field_fb_aux1_clx'])
-
+                    self.DataDev[dht_arg+str(m)], buff1_clx)
                 enqueue_barrier(self.queue)
+
+                # FFT of m mode
                 self.DataDev[arg_out_m] = self._fft(self.DataDev[arg_out_m],
                                                     dir=dir)
+
+                # Phase shift of the result
+                phs_str = [arg_out_m, 'NxNrm1', 'Nx']
+                phs_args = [self.DataDev[arg].data for arg in phs_str]
+                phs_args += [phs_shft.data,]
+                self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS,),
+                                            *phs_args).wait()
         elif dir == 1:
             dht_arg = 'DHT_inv_m'
-            arg_in = arg + '_fb_m'
-            arg_out = arg + '_m'
+            arg_in = arg_cmp + '_fb_m'
+            arg_out = arg_cmp + '_m'
 
-            self.DataDev['field_fb_aux1_clx'] = self._fft(
-                self.DataDev[arg_in+'0'], dir=dir)
+            # Prepare the phase shift
+            phs_shft = self._get_phase(self.Args['Xmin'], dir)
+            WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
 
-            self.cast_array_c2d(self.DataDev['field_fb_aux1_clx'],
-                                 self.DataDev['field_fb_aux1_dbl'])
+            # Copy and phase-shift the field
+            buff1_clx = self.DataDev[arg_in+'0'].copy()
+            phs_str = ['NxNrm1', 'Nx']
+            phs_args = [self.DataDev[arg].data for arg in phs_str]
+            phs_args = [buff1_clx.data,] + phs_args + [phs_shft.data,]
+            self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS,),
+                                        *phs_args).wait()
 
-            self.DataDev['field_fb_aux2_dbl'] = \
-                self._dot0(self.DataDev[dht_arg+'0'],
-                           self.DataDev['field_fb_aux1_dbl'])
+            # FFT of 0 mode and casting result to double dtype
+            buff1_clx = self._fft(buff1_clx, dir=dir)
+            buff1_dbl = self.dev_arr(dtype=np.double,
+                shape=(self.Args['Nr']-1, self.Args['Nx']))
+            self.cast_array_c2d(buff1_clx, buff1_dbl)
 
+            # DHT of 0 mode
+            buff2_dbl = self._dot0(self.DataDev[dht_arg+'0'], buff1_dbl)
             enqueue_barrier(self.queue)
-            self.DataDev[arg_out+'0'][1:] = self.DataDev['field_fb_aux2_dbl']
+            self.DataDev[arg_out+'0'][1:] = buff2_dbl
 
+            # Same for m>0 modes
             for m in range(1, self.Args['M']+1):
                 arg_in_m = arg_in + str(m)
                 arg_out_m = arg_out + str(m)
-                self.DataDev['field_fb_aux1_clx'] = self._fft(
-                    self.DataDev[arg_in_m], dir=dir)
 
-                self.DataDev['field_fb_aux2_clx'] = self._dot1(
-                    self.DataDev[dht_arg+str(m)],
-                    self.DataDev['field_fb_aux1_clx'])
+                # Copy and phase-shift the field
+                buff1_clx = self.DataDev[arg_in_m].copy()
+                phs_str = ['NxNrm1', 'Nx']
+                phs_args = [self.DataDev[arg].data for arg in phs_str]
+                phs_args = [buff1_clx.data,] + phs_args + [phs_shft.data,]
+                self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS,),
+                                            *phs_args).wait()
 
+                # FFT of m mode into a temporal array
+                buff1_clx = self._fft(buff1_clx, dir=dir)
+
+                # DHT of m mode
+                buff2_clx = self._dot1(self.DataDev[dht_arg+str(m)], buff1_clx)
                 enqueue_barrier(self.queue)
-                self.DataDev[arg_out_m][1:] = self.DataDev['field_fb_aux2_clx']
+                self.DataDev[arg_out_m][1:] = buff2_clx
+
+    def _get_phase(self, x_origin, dir):
+        WGS, WGS_tot = self.get_wgs(self.Args['Nx'])
+
+        phs_shft = self.dev_arr(dtype=np.complex128, shape=self.Args['Nx'])
+
+        args = [phs_shft.data, self.DataDev['kx'].data,
+                np.double(x_origin), np.uint32(self.Args['Nx']) ]
+
+        if dir==0:
+            self._get_phase_minus_knl(self.queue, (WGS_tot, ), (WGS,),
+                                      *args).wait()
+        elif dir==1:
+            self._get_phase_plus_knl(self.queue, (WGS_tot, ), (WGS, ),
+                                     *args).wait()
+        return phs_shft
+
 
     def _prepare_dot(self):
         input_array_c = self.dev_arr(dtype=np.complex128,

@@ -22,7 +22,7 @@ __kernel void advance_e_g_m(
   __global double2 *n1_y_m,
   __global double2 *n1_z_m)
 {
-  uint i_grid = get_global_id(0);
+  uint i_grid = (uint) get_global_id(0);
   if (i_grid < *NxNr)
    {
     double e0[3][2] = {{e_x_m[i_grid].s0, e_x_m[i_grid].s1},

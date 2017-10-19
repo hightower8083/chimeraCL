@@ -41,4 +41,9 @@ class Frame():
             inject_domain['Xmax'] = inject_domain['Xmin'] + x_shift
             inject_domain['Rmin'] = grid.Args['Rmin']
             inject_domain['Rmax'] = grid.Args['Rmax']
+
             specie.add_particles(domain_in=inject_domain)
+            specie.sort_parts(grid=grid)
+            specie.align_parts()
+            specie.Args['right_lim'] = specie.DataDev['x'][-1].get() \
+                                       + 0.5*specie.Args['ddx']

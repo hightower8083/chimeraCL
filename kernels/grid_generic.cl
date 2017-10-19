@@ -1,8 +1,5 @@
 // this is a source of grid kernels for chimeraCL project
 
-//#define PYOPENCL_DEFINE_CDOUBLE
-//#include <pyopencl-complex.h>
-
 // Divide double type 2D array by R along 0-th axis
 __kernel void divide_by_dv_dbl(
   __global double *arr,
@@ -10,7 +7,7 @@ __kernel void divide_by_dv_dbl(
   __constant uint *Nx,
   __global double *dv_inv)
 {
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < *NxNr)
    {
     uint Nx_loc = *Nx;
@@ -26,7 +23,7 @@ __kernel void divide_by_dv_clx(
   __constant uint *Nx,
   __global double *dv_inv)
 {
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < *NxNr)
    {
     uint Nx_loc = *Nx;
@@ -41,7 +38,7 @@ __kernel void treat_axis_dbl(
   __global double *arr,
              uint Nx)
 {
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < Nx)
    {
     uint Nx_loc = Nx;
@@ -54,7 +51,7 @@ __kernel void treat_axis_clx(
   __global double2 *arr,
                uint Nx)
 {
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < Nx)
    {
     uint Nx_loc = Nx;

@@ -17,7 +17,7 @@ __kernel void fill_grid(
            uint Nppc_r,
            uint Nppc_th)
 {
-    uint i_cell = get_global_id(0);
+    uint i_cell = (uint) get_global_id(0);
     if (i_cell < ncells)
     {
         uint Nx_cell = Nx-1;
@@ -57,37 +57,6 @@ __kernel void fill_grid(
   }
 }
 
-
-// Copy sorted particle data of double-type to a new array
-__kernel void data_align_dbl(
-  __global double *x,
-  __global double *x_new,
-  __global uint *sorted_indx,
-  uint num_p)
-{
-  uint ip = get_global_id(0);
-  double x_tmp;
-  if (ip < num_p)
-  {
-   x_tmp = x[sorted_indx[ip]];
-   x_new[ip] =  x_tmp;
-  }
-}
-
-// Copy sorted particle data of integer-type to a new array
-__kernel void data_align_int(
-  __global uint *x,
-  __global uint *x_new,
-  __global uint *sorted_indx,
-  __constant uint *num_p)
-{
-  uint ip = get_global_id(0);
-  if (ip < *num_p)
-   {
-    x_new[ip] = x[sorted_indx[ip]];
-   }
-}
-
 // Find cell indicies of the particles and
 // sums of paricles per cell
 __kernel void index_and_sum_in_cell(
@@ -104,7 +73,7 @@ __kernel void index_and_sum_in_cell(
   __constant double *rmin,
   __constant double *dr_inv)
 {
-  uint ip = get_global_id(0);
+  uint ip = (uint) get_global_id(0);
   if (ip < *num_p)
    {
     double r;
@@ -145,7 +114,7 @@ __kernel void push_p_boris(
   __constant double *dt,
   __constant uint *num_p)
 {
-  uint ip = get_global_id(0);
+  uint ip = (uint) get_global_id(0);
   if (ip < *num_p)
    {
     double u_p[3] = {px[ip],py[ip],pz[ip]};
@@ -204,7 +173,7 @@ __kernel void push_xyz(
   __constant double *dt,
   __constant uint *num_p)
 {
-  uint ip = get_global_id(0);
+  uint ip = (uint) get_global_id(0);
   if (ip < *num_p)
    {
     double dt_g = (*dt) * g_inv[ip];
@@ -218,3 +187,34 @@ __kernel void push_xyz(
     z[ip] += dz;
    }
 }
+
+// Copy sorted particle data of double-type to a new array
+__kernel void data_align_dbl(
+  __global double *x,
+  __global double *x_new,
+  __global uint *sorted_indx,
+  uint num_p)
+{
+  uint ip = (uint) get_global_id(0);
+  double x_tmp;
+  if (ip < num_p)
+  {
+   x_tmp = x[sorted_indx[ip]];
+   x_new[ip] =  x_tmp;
+  }
+}
+
+// Copy sorted particle data of integer-type to a new array
+__kernel void data_align_int(
+  __global uint *x,
+  __global uint *x_new,
+  __global uint *sorted_indx,
+  __constant uint *num_p)
+{
+  uint ip = (uint) get_global_id(0);
+  if (ip < *num_p)
+   {
+    x_new[ip] = x[sorted_indx[ip]];
+   }
+}
+

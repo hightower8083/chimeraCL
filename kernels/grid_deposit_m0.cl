@@ -35,7 +35,7 @@ __kernel void depose_scalar(
   __global double *scl_m0)
 {
   // running kernels over the 4cells
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
 if (i_cell < *NxNr_4)
    {
     // get cell number and period of 4cell-grid
@@ -145,7 +145,7 @@ __kernel void project_scalar(
   __global double *scl_m0)
 {
   // running kernels over the cells
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < *Nxm1Nrm1)
    {
     // get cell number and period of grid
@@ -261,7 +261,7 @@ __kernel void depose_vector(
   __global double *vec_z_m0)
 {
   // running kernels over the 4cells
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < *NxNr_4)
    {
     // get cell number and period of 4cell-grid
@@ -395,7 +395,7 @@ __kernel void project_vec6(
   __global double *vec_z_2_m0)
 {
   // running kernels over the cells
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < *Nxm1Nrm1)
    {
     // get cell number and period of grid

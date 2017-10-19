@@ -190,11 +190,12 @@ class ParticleMethodsCL(GenericMethodsCL):
                     [grid.DataDev[arg].data for arg in grid_strs]
         self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
         self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'])
+        ## Getting the plasma right boundary modified with respect to frame
+#        if self.Args['right_lim'] > grid.Args['Xgrid'][-1]:
+#            dL = self.Args['right_lim']-grid.Args['Xgrid'][-1]
+#            ip_last = int(np.round(dL/self.Args['ddx'] - 0.5)) + 1
+#            self.Args['right_lim'] -= self.Args['ddx']*ip_last
 
-        if self.Args['right_lim'] > grid.Args['Xgrid'][-1]:
-            dL = self.Args['right_lim']-grid.Args['Xgrid'][-1]
-            ip_last = int(dL/self.Args['ddx'] - 0.5) + 1
-            self.Args['right_lim'] -= self.Args['ddx']*ip_last
 
     def index_sort(self):
         if self.comm.sort_method == 'Radix':
@@ -211,6 +212,7 @@ class ParticleMethodsCL(GenericMethodsCL):
                     get().argsort()
                 self.DataDev['sort_indx'] = to_device(
                     self.queue, self.DataDev['sort_indx'])
+
 
     def align_and_damp(self, comps_align, comps_simple_dump):
         num_staying = self.DataDev['cell_offset'][-1].get().item()

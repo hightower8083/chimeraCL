@@ -1,8 +1,5 @@
 /// this is a source of grid kernels for chimeraCL project
 
-// #define PYOPENCL_DEFINE_CDOUBLE
-// #include <pyopencl-complex.h>
-
 // Depose particles "weights" onto 2D grid via linear projection,
 // using groups of 4 cells and barrierd steps for each cell
 // in a group by calling kernel with different offsets: (0,1,2,3)
@@ -39,7 +36,7 @@ __kernel void depose_scalar(
   __global double2 *scl_m1)
 {
   // running kernels over the 4cells
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < *NxNr_4)
    {
     // get cell number and period of 4cell-grid
@@ -197,7 +194,7 @@ __kernel void depose_vector(
   __global double2 *vec_z_m1)
 {
   // running kernels over the 4cells
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < *NxNr_4)
    {
     // get cell number and period of 4cell-grid
@@ -346,7 +343,7 @@ __kernel void project_scalar(
   __global double2 *scl_m1)
 {
   // running kernels over the cells
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < *Nxm1Nrm1)
    {
     // get cell number and period of grid
@@ -468,7 +465,7 @@ __kernel void project_vec6(
   __global double2 *vec_z_2_m1)
 {
   // running kernels over the 4cells
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < *Nxm1Nrm1)
    {
     // get cell number and period of grid
