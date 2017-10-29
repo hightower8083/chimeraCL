@@ -6,8 +6,8 @@ Nheatup = 10
 num_ps = range(10**6,7*10**6,10**6)
 grid_sizes = range(1,9,1)
 
-answers_cpu = [0,]
-answers_gpu = None
+answers_cpu = None #[0,]
+answers_gpu = [0,2]
 
 gpu_al_np = []
 gpu_noal_np = []

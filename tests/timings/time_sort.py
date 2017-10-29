@@ -5,7 +5,7 @@ from methods.generic_methods_cl import Communicator
 from particles import Particles
 from grid import Grid
 
-def run_test(dims=(1024,256),Np=3e6,answers=[0,2],verb=False,
+def run_test(dims=(1024,256),Np=3e6,answers=[],verb=False,
              aligned=False, Nint = 100, Nheatup = 10):
 
     if answers is None:
@@ -19,7 +19,8 @@ def run_test(dims=(1024,256),Np=3e6,answers=[0,2],verb=False,
     parts = Particles(grid_in,comm)
     grid = Grid(grid_in,comm)
 
-    beam_in = {'Np':int(Np),
+    beam_in = {'Type':'beam',
+               'Np':int(Np),
                'x_c':0.,'Lx':0.2,
                'y_c':0.,'Ly':0.2,
                'z_c':0.,'Lz':0.2,
@@ -49,5 +50,8 @@ if __name__ == "__main__":
     conv_to_list = lambda str_var: list(array( str_var.split(':')).\
                                           astype(int32))
 
-    run_test(answers=conv_to_list(sys.argv[-1]),verb=True)
+    if len(sys.argv)>1:
+        run_test(answers=conv_to_list(sys.argv[-1]),verb=True)
+    else:
+        run_test(verb=True)
 
