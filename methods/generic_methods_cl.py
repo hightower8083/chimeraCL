@@ -36,7 +36,7 @@ class GenericMethodsCL:
         if self.dev_type=='CPU':
             self.WGS = 32
         else:
-            self.WGS = self.ctx.devices[0].max_work_group_size
+            self.WGS = 256 #self.ctx.devices[0].max_work_group_size
 
         self.block_def_str = "#define BLOCK_SIZE {:d}\n".format(self.WGS)
 

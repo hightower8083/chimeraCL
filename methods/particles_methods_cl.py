@@ -151,19 +151,22 @@ class ParticleMethodsCL(GenericMethodsCL):
     def push_coords(self, mode='half'):
         if self.Args['Np']==0:
             return
+
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
         if mode=='half':
-            args_strs =  ['x','y','z', 'px','py','pz','g_inv','dt_2','Np']
+            which_dt = 'dt_2'
         else:
-            args_strs =  ['x','y','z', 'px','py','pz','g_inv','dt','Np']
+            which_dt = 'dt'
 
+        args_strs =  ['x','y','z', 'px','py','pz','g_inv',which_dt,'Np']
         args = [self.DataDev[arg].data for arg in args_strs]
         self._push_xyz_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
 
     def push_veloc(self):
         if self.Args['Np'] == 0:
             return
+
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
         args_strs =  ['px','py','pz','g_inv',
@@ -192,12 +195,6 @@ class ParticleMethodsCL(GenericMethodsCL):
                     [grid.DataDev[arg].data for arg in grid_strs]
         self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
         self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'])
-        ## Getting the plasma right boundary modified with respect to frame
-#        if self.Args['right_lim'] > grid.Args['Xgrid'][-1]:
-#            dL = self.Args['right_lim']-grid.Args['Xgrid'][-1]
-#            ip_last = int(np.round(dL/self.Args['ddx'] - 0.5)) + 1
-#            self.Args['right_lim'] -= self.Args['ddx']*ip_last
-
 
     def index_sort(self):
         if self.comm.sort_method == 'Radix':

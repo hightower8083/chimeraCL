@@ -19,7 +19,7 @@ def run_test(dims=(1024,256),Np=3e6,answers=[],verb=False,
     parts = Particles(grid_in,comm)
     grid = Grid(grid_in,comm)
 
-    beam_in = {'Type':'beam',
+    beam_in = {'FullCharge':1,
                'Np':int(Np),
                'x_c':0.,'Lx':0.2,
                'y_c':0.,'Ly':0.2,
@@ -28,7 +28,7 @@ def run_test(dims=(1024,256),Np=3e6,answers=[],verb=False,
                'py_c':0.,'dpy':0.5,
                'pz_c':0.,'dpz':0.5}
 
-    parts.make_parts(beam_in)
+    parts.add_particles(beam_in=beam_in)
 
     for i in range(Nint+Nheatup):
         if i==Nheatup: t0 = time()

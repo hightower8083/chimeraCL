@@ -122,22 +122,23 @@ __kernel void push_p_boris(
     double B_p[3] = {Bx[ip],By[ip],Bz[ip]};
 
     double dt_2 = 0.5*(*dt);
-    double um[3], up[3], u0[3], t[3], t2, s[3], g_p;
+    double um[3], up[3], u0[3], t[3], t2p1_m1_05, s[3], g_p_inv;
+    int i;
 
-    for(int i=0;i<3;i++){
+    for(i=0;i<3;i++){
       um[i] = u_p[i] + dt_2*E_p[i];
       }
 
-    g_p = sqrt( 1. + um[0]*um[0] + um[1]*um[1] + um[2]*um[2]);
+    g_p_inv = 1. / sqrt(1. + um[0]*um[0] + um[1]*um[1] + um[2]*um[2]);
 
-    for(int i=0;i<3;i++){
-      t[i] = dt_2*B_p[i]/g_p;
+    for(i=0;i<3;i++){
+      t[i] = dt_2 * B_p[i] * g_p_inv;
       }
 
-    t2 = t[0]*t[0] + t[1]*t[1] + t[2]*t[2];
+    t2p1_m1_05 = 2. / (1 + (t[0]*t[0] + t[1]*t[1] + t[2]*t[2])) ;
 
-    for(int i=0;i<3;i++){
-      s[i] = 2*t[i]/(1+t2);
+    for(i=0;i<3;i++){
+      s[i] = t[i] * t2p1_m1_05;
       }
 
     u0[0] = um[0] + um[1]*t[2] - um[2]*t[1];
@@ -152,12 +153,12 @@ __kernel void push_p_boris(
       u_p[i] = up[i] + dt_2*E_p[i];
       }
 
-    g_p = sqrt( 1. + u_p[0]*u_p[0] + u_p[1]*u_p[1] + u_p[2]*u_p[2] );
+    g_p_inv = 1. / sqrt(1. + u_p[0]*u_p[0] + u_p[1]*u_p[1] + u_p[2]*u_p[2]);
 
     px[ip] = u_p[0];
     py[ip] = u_p[1];
     pz[ip] = u_p[2];
-    g_inv[ip] = 1./g_p;
+    g_inv[ip] = g_p_inv;
     }
 }
 
