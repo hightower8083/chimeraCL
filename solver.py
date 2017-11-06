@@ -26,7 +26,7 @@ class Solver(Grid, Transformer, SolverMethodsCL):
         self._make_ms_coefficients()
 
     def push_fields(self):
-        self.advance_fields(vecs=['E', 'G',' J', 'dN0', 'dN1'])
+        self.advance_fields(vecs=['E', 'G', 'J', 'dN0', 'dN1'])
 
     def add_gausian_pulse(self, laser):
 
