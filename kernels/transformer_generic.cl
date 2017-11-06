@@ -1,5 +1,29 @@
 // this is a source of transformer kernels for chimeraCL project
 
+__kernel void get_m1(
+  __global double2 *fld_m_m1,
+  __global double2 *fld_m_p1,
+  __constant uint *Nx,
+  __constant uint *NxNrm1)
+{
+  uint i_grid = (uint) get_global_id(0);
+  if (i_grid < *NxNrm1)
+   {
+    uint Nx_loc = *Nx;
+    uint ir = i_grid/Nx_loc;
+    uint ix = i_grid - ir*Nx_loc;
+
+    uint ix_orig = Nx_loc - ix;
+    if (ix == 0) {ix_orig = 0;}
+
+    uint i_grid_orig = ix_orig + ir*Nx_loc;
+
+    fld_m_m1[i_grid].s0 = -fld_m_p1[i_grid_orig].s0;
+    fld_m_m1[i_grid].s1 =  fld_m_p1[i_grid_orig].s1;
+   }
+}
+
+
 // Get the transofmed fields phase (+) from frame origin X-coordiante
 __kernel void get_phase_plus(
   __global double2 *phs_shft,

@@ -30,6 +30,7 @@ class TransformerMethodsCL(GenericMethodsCL):
         self._get_phase_plus_knl = prg.get_phase_plus
         self._get_phase_minus_knl = prg.get_phase_minus
         self._multiply_by_phase_knl = prg.multiply_by_phase
+        self._get_m1_knl = prg.get_m1
 
         self._prepare_fft()
         self._prepare_dot()
@@ -149,6 +150,19 @@ class TransformerMethodsCL(GenericMethodsCL):
                                      *args).wait()
         return phs_shft
 
+    def _get_m1(self,fld_comp):
+        if self.Args['M']==0:
+            return
+        print(fld_comp + '_fb_m1')
+        buff = empty_like(self.DataDev[fld_comp + '_fb_m1'])
+
+        arg_str = [fld_comp+'_fb_m1', 'Nx', 'NxNrm1',]
+        args = [buff.data,] + [self.DataDev[arg].data for arg in arg_str]
+
+        WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
+        self._get_m1_knl(self.queue, (WGS_tot, ), (WGS, ),*args).wait()
+
+        return buff
 
     def _prepare_dot(self):
         input_array_c = self.dev_arr(dtype=np.complex128,

@@ -2,6 +2,7 @@ import numpy as np
 
 from pyopencl import Program
 from pyopencl import enqueue_marker, enqueue_barrier
+from pyopencl.array import empty_like
 
 from .generic_methods_cl import GenericMethodsCL
 from .generic_methods_cl import compiler_options
@@ -43,6 +44,5 @@ class SolverMethodsCL(GenericMethodsCL):
             args = args_solver + args_fld
 
             WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
-            self._advance_e_g_m_knl(self.queue, (WGS_tot, ),
-                                    (WGS, ),*args)
+            self._advance_e_g_m_knl(self.queue, (WGS_tot, ), (WGS, ),*args)
         enqueue_barrier(self.queue)
