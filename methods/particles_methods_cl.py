@@ -54,6 +54,7 @@ class ParticleMethodsCL(GenericMethodsCL):
             buff[old_Np:] = self.DataDev[arg+'_new']
             self.DataDev[arg] = buff
             self.DataDev[arg+'_new'] = None
+
         self.reset_num_parts()
 
     def make_new_domain(self, parts_in):
@@ -61,8 +62,8 @@ class ParticleMethodsCL(GenericMethodsCL):
 
         xmin, xmax, rmin, rmax = \
           [parts_in[arg] for arg in ['Xmin', 'Xmax', 'Rmin', 'Rmax']]
-        Nx_loc = int( round((xmax-xmin) / self.Args['dx']) + 1)
-        Nr_loc = int( round((rmax-rmin) / self.Args['dr']) + 1)
+        Nx_loc = int( np.ceil((xmax-xmin) / self.Args['dx']) + 1)
+        Nr_loc = int( np.round((rmax-rmin) / self.Args['dr']) + 1)
         Xgrid_loc = self.dev_arr(val = xmin+self.Args['dx']*np.arange(Nx_loc))
         Rgrid_loc = self.dev_arr(val = rmin+self.Args['dr']*np.arange(Nr_loc))
 
@@ -75,13 +76,12 @@ class ParticleMethodsCL(GenericMethodsCL):
             self.DataDev[arg+'_new'] = self.dev_arr(
                 shape=Np, dtype=np.double)
 
-        self.DataDev['theta_variator_new'] = self.dev_arr(shape=Ncells_loc,
-                                                          dtype=np.double)
-        self._fill_arr_rand(self.DataDev['theta_variator_new'],
-                           xmin=0, xmax=2*np.pi)
+        theta_variator = self.dev_arr(shape=Ncells_loc, dtype=np.double)
+        self._fill_arr_rand(theta_variator, xmin=0, xmax=2*np.pi)
 
-        gn_strs = ['x', 'y', 'z', 'w', 'theta_variator']
+        gn_strs = ['x', 'y', 'z', 'w']
         gn_args = [self.DataDev[arg+'_new'].data for arg in gn_strs]
+        gn_args += [theta_variator.data, ]
         gn_args += [Xgrid_loc.data, Rgrid_loc.data,
                     np.uint32(Nx_loc), np.uint32(Ncells_loc)]
         gn_args += list(np.array(self.Args['Nppc'],dtype=np.uint32))
@@ -176,51 +176,48 @@ class ParticleMethodsCL(GenericMethodsCL):
         args = [self.DataDev[arg].data for arg in args_strs]
         self._push_p_boris_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
 
-    def index_and_sum(self, grid):
+    def index_sort(self, grid):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
-        self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
-                                                    shape=self.Args['Np'])
+        indx_in_cell = self.dev_arr(dtype=np.uint32,
+                                    shape=self.Args['Np'])
 
         self.DataDev['cell_offset'] = self.dev_arr(val=0, dtype=np.uint32,
                                                    shape=grid.Args['Nxm1Nrm1'])
 
-        part_strs =  ['x','y','z','indx_in_cell',
-                      'cell_offset','Np']
-
-        grid_strs =  ['Nx','Xmin','dx_inv',
-                      'Nr','Rmin','dr_inv']
+        part_strs =  ['x', 'y', 'z', 'cell_offset', 'Np']
+        grid_strs =  ['Nx', 'Xmin', 'dx_inv',
+                      'Nr', 'Rmin', 'dr_inv']
 
         args = [self.DataDev[arg].data for arg in part_strs] + \
-                    [grid.DataDev[arg].data for arg in grid_strs]
+               [indx_in_cell.data, ] + \
+               [grid.DataDev[arg].data for arg in grid_strs]
+
         self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
         self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'])
 
-    def index_sort(self):
         if self.comm.sort_method == 'Radix':
-            indx_size = self.DataDev['indx_in_cell'].size
+            indx_size = indx_in_cell.size
             self.DataDev['sort_indx'] = arange(self.queue, 0, indx_size, 1,
                                                dtype=np.uint32)
 
-            (self.DataDev['indx_in_cell'], self.DataDev['sort_indx']), evnt = \
-              self._sort_rdx_knl(self.DataDev['indx_in_cell'],
+            (indx_in_cell, self.DataDev['sort_indx']), evnt = \
+              self._sort_rdx_knl(indx_in_cell,
                                  self.DataDev['sort_indx'], )
             evnt.wait()
         elif self.comm.sort_method == 'NumPy':
-                self.DataDev['sort_indx'] = self.DataDev['indx_in_cell'].\
-                    get().argsort()
+                self.DataDev['sort_indx'] = indx_in_cell.get().argsort()
                 self.DataDev['sort_indx'] = to_device(
                     self.queue, self.DataDev['sort_indx'])
 
 
-    def align_and_damp(self, comps_align, comps_simple_dump):
+    def align_and_damp(self, comps_align):
         num_staying = self.DataDev['cell_offset'][-1].get().item()
 
         if num_staying == 0:
-            for comp in comps_align+comps_simple_dump:
+            for comp in comps_align + ['sort_indx',]:
                 self.DataDev[comp] = self.dev_arr(shape=0,
                                         dtype=self.DataDev[comp].dtype)
-            self.DataDev['sort_indx'] = self.dev_arr(shape=0,dtype=np.uint32)
             self.reset_num_parts()
             return
 
@@ -233,9 +230,6 @@ class ParticleMethodsCL(GenericMethodsCL):
                                      self.DataDev['sort_indx'].data,
                                      np.uint32(num_staying)).wait()
             self.DataDev[comp] = buff
-
-        for comp in comps_simple_dump:
-            self.DataDev[comp] = self.DataDev[comp][:num_staying]
 
         self.DataDev['sort_indx'] = arange(self.queue, 0, num_staying, 1,
                                            dtype=np.uint32)

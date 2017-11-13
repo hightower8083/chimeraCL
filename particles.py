@@ -20,8 +20,7 @@ class Particles(ParticleMethodsCL):
         if self.Args['Np'] == 0:
             return
 
-        self.index_and_sum(grid)
-        self.index_sort()
+        self.index_sort(grid)
 
     def add_particles(self, domain_in=None, beam_in=None):
         if domain_in is not None:
@@ -36,8 +35,7 @@ class Particles(ParticleMethodsCL):
             return
 
         self.align_and_damp(
-            comps_align = ['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv', 'w'],
-            comps_simple_dump = ['indx_in_cell',])
+            comps_align = ['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv', 'w'], )
 
     def _process_configs(self, configs_in):
         self.Args = configs_in
