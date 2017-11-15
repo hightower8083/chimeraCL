@@ -47,7 +47,7 @@ class TransformerMethodsCL(GenericMethodsCL):
 
             # DHT of 0 mode into a temporal array
             buff1_dbl = self.DataDev[arg_in+'0'][1:].copy()
-            buff2_dbl = self._dot0(self.DataDev[dht_arg+'0'],buff1_dbl)
+            buff2_dbl = self._dot0(self.DataDev[dht_arg+'0'], buff1_dbl)
             enqueue_barrier(self.queue)
 
             # FFT of 0 mode casted to complex dtype
@@ -59,7 +59,7 @@ class TransformerMethodsCL(GenericMethodsCL):
             # Phase shift of the result
             phs_str = [arg_out+'0', 'NxNrm1', 'Nx']
             phs_args = [self.DataDev[arg].data for arg in phs_str]
-            phs_args += [phs_shft.data,]
+            phs_args += [phs_shft.data, ]
             self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS,),
                                         *phs_args).wait()
 
@@ -82,8 +82,8 @@ class TransformerMethodsCL(GenericMethodsCL):
                 # Phase shift of the result
                 phs_str = [arg_out_m, 'NxNrm1', 'Nx']
                 phs_args = [self.DataDev[arg].data for arg in phs_str]
-                phs_args += [phs_shft.data,]
-                self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS,),
+                phs_args += [phs_shft.data, ]
+                self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS, ),
                                             *phs_args).wait()
         elif dir == 1:
             dht_arg = 'DHT_inv_m'
@@ -98,8 +98,8 @@ class TransformerMethodsCL(GenericMethodsCL):
             buff1_clx = self.DataDev[arg_in+'0'].copy()
             phs_str = ['NxNrm1', 'Nx']
             phs_args = [self.DataDev[arg].data for arg in phs_str]
-            phs_args = [buff1_clx.data,] + phs_args + [phs_shft.data,]
-            self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS,),
+            phs_args = [buff1_clx.data, ] + phs_args + [phs_shft.data, ]
+            self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS, ),
                                         *phs_args).wait()
 
             # FFT of 0 mode and casting result to double dtype
@@ -122,8 +122,8 @@ class TransformerMethodsCL(GenericMethodsCL):
                 buff1_clx = self.DataDev[arg_in_m].copy()
                 phs_str = ['NxNrm1', 'Nx']
                 phs_args = [self.DataDev[arg].data for arg in phs_str]
-                phs_args = [buff1_clx.data,] + phs_args + [phs_shft.data,]
-                self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS,),
+                phs_args = [buff1_clx.data, ] + phs_args + [phs_shft.data, ]
+                self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS, ),
                                             *phs_args).wait()
 
                 # FFT of m mode into a temporal array
@@ -142,18 +142,15 @@ class TransformerMethodsCL(GenericMethodsCL):
         args = [phs_shft.data, self.DataDev['kx'].data,
                 np.double(x_origin), np.uint32(self.Args['Nx']) ]
 
-        if dir==0:
-            self._get_phase_minus_knl(self.queue, (WGS_tot, ), (WGS,),
-                                      *args).wait()
-        elif dir==1:
-            self._get_phase_plus_knl(self.queue, (WGS_tot, ), (WGS, ),
-                                     *args).wait()
+        phaser = {0: self._get_phase_minus_knl, 1: self._get_phase_plus_knl]
+        phaser[dir](self.queue, (WGS_tot, ), (WGS, ), *args).wait()
+
         return phs_shft
 
     def _get_m1(self,fld_comp):
         if self.Args['M']==0:
             return
-        print(fld_comp + '_fb_m1')
+
         buff = empty_like(self.DataDev[fld_comp + '_fb_m1'])
 
         arg_str = [fld_comp+'_fb_m1', 'Nx', 'NxNrm1',]
