@@ -63,6 +63,34 @@ class GridMethodsCL(GenericMethodsCL):
                                            i_off, *args,
                                            wait_for = [evnt,])
 
+    def depose_vector(self, parts, vec, factors,vec_fld):
+        part_str =  ['sort_indx','x','y','z'] + vec + factors + \
+                     ['cell_offset']
+
+        grid_str = ['Nx', 'Xmin', 'dx_inv',
+                     'Nr', 'Rmin', 'dr_inv',
+                     'NxNr_4']
+
+        fld_str = []
+        for m in range(self.Args['M']+1):
+            for comp in ('x','y','z'):
+                fld_str.append(vec_fld + comp + '_m' + str(m))
+
+        args_part = [parts.DataDev[arg].data for arg in part_str]
+        args_grid = [self.DataDev[arg].data for arg in grid_str]
+        args_fld = [self.DataDev[arg].data for arg in fld_str]
+
+        args_dep = args_part + args_grid + args_fld
+
+        WGS, WGS_tot = self.get_wgs(self.Args['NxNr_4'])
+        evnt = enqueue_marker(self.queue)
+        for i_off in np.arange(4).astype(np.uint32):
+            evnt = self._depose_vector_knl(self.queue,
+                                           (WGS_tot,),(WGS,),
+                                           i_off, *args_dep,
+                                           wait_for = [evnt,])
+        enqueue_barrier(self.queue)
+
     def postproc_depose_scalar(self, fld):
         # Correct near axis deposition
         args_grid = [self.DataDev[fld+'_m'+str(m)].data \
@@ -90,52 +118,6 @@ class GridMethodsCL(GenericMethodsCL):
         for m in range(1,self.Args['M']+1):
             self._divide_by_dv_clx_knl(self.queue,(WGS_tot,), (WGS,),
                                  args_grid[m],*grid_args)
-        enqueue_barrier(self.queue)
-
-    def project_scalar(self, parts, sclr, fld):
-        part_str = ['sort_indx',sclr,'x','y','z','cell_offset']
-
-        grid_str = ['Nx', 'Xmin', 'dx_inv',
-                     'Nr', 'Rmin', 'dr_inv',
-                     'Nxm1Nrm1']
-
-        fld_str = [fld+'_m'+str(m) for m in range(self.Args['M']+1)]
-
-        args_parts = [parts.DataDev[arg].data for arg in part_str]
-        args_grid = [self.DataDev[arg].data for arg in grid_str]
-        args_fld = [self.DataDev[arg].data for arg in fld_str]
-
-        args = args_parts + args_grid + args_fld
-
-        WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1'])
-        evnt = self._project_scalar_knl(self.queue, (WGS_tot,),(WGS,),*args)
-
-    def depose_vector(self, parts, vec, factors,vec_fld):
-        part_str =  ['sort_indx','x','y','z'] + vec + factors + \
-                     ['cell_offset']
-
-        grid_str = ['Nx', 'Xmin', 'dx_inv',
-                     'Nr', 'Rmin', 'dr_inv',
-                     'NxNr_4']
-
-        fld_str = []
-        for m in range(self.Args['M']+1):
-            for comp in ('x','y','z'):
-                fld_str.append(vec_fld + comp + '_m' + str(m))
-
-        args_part = [parts.DataDev[arg].data for arg in part_str]
-        args_grid = [self.DataDev[arg].data for arg in grid_str]
-        args_fld = [self.DataDev[arg].data for arg in fld_str]
-
-        args_dep = args_part + args_grid + args_fld
-
-        WGS, WGS_tot = self.get_wgs(self.Args['NxNr_4'])
-        evnt = enqueue_marker(self.queue)
-        for i_off in np.arange(4).astype(np.uint32):
-            evnt = self._depose_vector_knl(self.queue,
-                                           (WGS_tot,),(WGS,),
-                                           i_off, *args_dep,
-                                           wait_for = [evnt,])
         enqueue_barrier(self.queue)
 
     def postproc_depose_vector(self,vec_fld):
@@ -166,6 +148,24 @@ class GridMethodsCL(GenericMethodsCL):
                 self._divide_by_dv_clx_knl(self.queue,(WGS_tot, ), (WGS, ),
                                           args_fld[m], *args_raddiv)
             enqueue_barrier(self.queue)
+
+    def project_scalar(self, parts, sclr, fld):
+        part_str = ['sort_indx',sclr,'x','y','z','cell_offset']
+
+        grid_str = ['Nx', 'Xmin', 'dx_inv',
+                     'Nr', 'Rmin', 'dr_inv',
+                     'Nxm1Nrm1']
+
+        fld_str = [fld+'_m'+str(m) for m in range(self.Args['M']+1)]
+
+        args_parts = [parts.DataDev[arg].data for arg in part_str]
+        args_grid = [self.DataDev[arg].data for arg in grid_str]
+        args_fld = [self.DataDev[arg].data for arg in fld_str]
+
+        args = args_parts + args_grid + args_fld
+
+        WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1'])
+        evnt = self._project_scalar_knl(self.queue, (WGS_tot,),(WGS,),*args)
 
     def project_vec6(self, parts, vecs, flds):
         part_str = ['sort_indx',] + \

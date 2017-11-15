@@ -108,13 +108,15 @@ class Communicator:
         api = ocl_api()
         self.thr = api.Thread(cqd=self.queue)
 
-        selected_dev = self.queue.device #ctx.devices[0]
+        selected_dev = self.queue.device
         self.dev_type = device_type.to_string(selected_dev.type)
+        self.dev_name = self.queue.device.name
         self.plat_name = selected_dev.platform.vendor
         self.ocl_version = selected_dev.opencl_c_version
 
-        print("{} device is chosen on {} platform with {}".
-              format(self.dev_type,self.plat_name,self.ocl_version))
+        print("{} device {} is chosen on {} platform with {} compiler".
+              format(self.dev_type, self.dev_name,
+                     self.plat_name, self.ocl_version))
 
         if self.dev_type=='CPU' and self.plat_name=='Apple':
             print('\tReikna FFT is replaced by pyFFTW')

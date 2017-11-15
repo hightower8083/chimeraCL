@@ -370,6 +370,7 @@ __kernel void project_scalar(
     uint i,j,i_dep;
 
     // allocate privite cell array for the deposition
+    // NB: multiplictaion of m1 by 2 accounts for Hermit symmetry
     double scl_cell_m0[2][2];
     double scl_cell_m1[2][2][2];
 
@@ -377,8 +378,8 @@ __kernel void project_scalar(
       for (j=0;j<2;j++){
         i_dep = i_grid_glob + j + Nx_grid*i;
         scl_cell_m0[i][j] = scl_m0[i_dep];
-        scl_cell_m1[i][j][0] = (double) scl_m1[i_dep].s0;
-        scl_cell_m1[i][j][1] = (double) scl_m1[i_dep].s1;
+        scl_cell_m1[i][j][0] = 2*((double) scl_m1[i_dep].s0);
+        scl_cell_m1[i][j][1] = 2*((double) scl_m1[i_dep].s1);
         }}
 
     // allocate privitely some reused variables
@@ -492,6 +493,7 @@ __kernel void project_vec6(
     uint i,j,k,i_dep;
 
     // allocate privite cell array for the deposition
+    // NB: multiplictaion of m1 by 2 accounts for Hermit symmetry
     double vec_1_cell_m0[3][2][2] ;
     double vec_2_cell_m0[3][2][2] ;
     double vec_1_cell_m1[3][2][2][2] ;
@@ -508,23 +510,23 @@ __kernel void project_vec6(
         vec_2_cell_m0[1][i][j] = vec_y_2_m0[i_dep];
         vec_2_cell_m0[2][i][j] = vec_z_2_m0[i_dep];
 
-        vec_1_cell_m1[0][i][j][0] = (double) vec_x_1_m1[i_dep].s0;
-        vec_1_cell_m1[0][i][j][1] = (double) vec_x_1_m1[i_dep].s1;
+        vec_1_cell_m1[0][i][j][0] = 2 * ((double) vec_x_1_m1[i_dep].s0);
+        vec_1_cell_m1[0][i][j][1] = 2 * ((double) vec_x_1_m1[i_dep].s1);
 
-        vec_1_cell_m1[1][i][j][0] = (double) vec_y_1_m1[i_dep].s0;
-        vec_1_cell_m1[1][i][j][1] = (double) vec_y_1_m1[i_dep].s1;
+        vec_1_cell_m1[1][i][j][0] = 2 * ((double) vec_y_1_m1[i_dep].s0);
+        vec_1_cell_m1[1][i][j][1] = 2 * ((double) vec_y_1_m1[i_dep].s1);
 
-        vec_1_cell_m1[2][i][j][0] = (double) vec_z_1_m1[i_dep].s0;
-        vec_1_cell_m1[2][i][j][1] = (double) vec_z_1_m1[i_dep].s1;
+        vec_1_cell_m1[2][i][j][0] = 2 * ((double) vec_z_1_m1[i_dep].s0);
+        vec_1_cell_m1[2][i][j][1] = 2 * ((double) vec_z_1_m1[i_dep].s1);
 
-        vec_2_cell_m1[0][i][j][0] = (double) vec_x_2_m1[i_dep].s0;
-        vec_2_cell_m1[0][i][j][1] = (double) vec_x_2_m1[i_dep].s1;
+        vec_2_cell_m1[0][i][j][0] = 2 * ((double) vec_x_2_m1[i_dep].s0);
+        vec_2_cell_m1[0][i][j][1] = 2 * ((double) vec_x_2_m1[i_dep].s1);
 
-        vec_2_cell_m1[1][i][j][0] = (double) vec_y_2_m1[i_dep].s0;
-        vec_2_cell_m1[1][i][j][1] = (double) vec_y_2_m1[i_dep].s1;
+        vec_2_cell_m1[1][i][j][0] = 2 * ((double) vec_y_2_m1[i_dep].s0);
+        vec_2_cell_m1[1][i][j][1] = 2 * ((double) vec_y_2_m1[i_dep].s1);
 
-        vec_2_cell_m1[2][i][j][0] = (double) vec_z_2_m1[i_dep].s0;
-        vec_2_cell_m1[2][i][j][1] = (double) vec_z_2_m1[i_dep].s1;
+        vec_2_cell_m1[2][i][j][0] = 2 * ((double) vec_z_2_m1[i_dep].s0);
+        vec_2_cell_m1[2][i][j][1] = 2 * ((double) vec_z_2_m1[i_dep].s1);
         }}
 
     // allocate privitely some reused variables
