@@ -37,7 +37,6 @@ __kernel void fill_grid(
         double dr = 1./( (double) Nppc_r);
         double dth = 2*M_PI/( (double) Nppc_th);
         double th, rp, sin_th, cos_th, rp_s, rp_c;
-        double r_cell = rmin + 0.5*dr;
 
         for (uint incell_th=0; incell_th<Nppc_th; incell_th++){
           th = thmin + incell_th*dth;

@@ -39,7 +39,7 @@ class Frame():
             inject_domain = {}
             inject_domain['Xmin'] = specie.Args['right_lim']
             inject_domain['Xmax'] = inject_domain['Xmin'] + x_shift
-            inject_domain['Rmin'] = grid.Args['Rmin']
+            inject_domain['Rmin'] = grid.Args['Rmin'] * (grid.Args['Rmin']>0)
             inject_domain['Rmax'] = grid.Args['Rmax']
 
             specie.add_particles(domain_in=inject_domain)

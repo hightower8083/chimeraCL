@@ -11,9 +11,12 @@ class Transformer(TransformerMethodsCL):
         self._make_DHT()
         self._init_transformer_data_on_dev()
 
-    def fb_transform(self, comps=[], dir=0):
-        for comp in comps:
-            self.transform_field(comp, dir=dir)
+    def fb_transform(self, scals=[], vects=[], dir=0):
+        for sclr in scals:
+            self.transform_field(sclr, dir=dir)
+        for vect in vects:
+            for comp in self.Args['vec_comps']:
+                self.transform_field(vect+comp, dir=dir)
 
     def _make_spectral_axes(self):
         if 'KxShift' in self.Args:
@@ -58,12 +61,10 @@ class Transformer(TransformerMethodsCL):
 
         flds_str = ['E', 'B', 'G', 'J', 'dN0', 'dN1']
 
-        flds_comps_str = []
+        flds_comps_str = ['rho',]
         for fld_str in flds_str:
             for comp_str in self.Args['vec_comps']:
                 flds_comps_str.append(fld_str + comp_str)
-
-        flds_comps_str = ['rho',] + flds_comps_str
 
         for arg in flds_comps_str:
             arg += '_fb_m'

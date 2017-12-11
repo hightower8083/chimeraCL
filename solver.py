@@ -47,7 +47,7 @@ class Solver(Grid, Transformer, SolverMethodsCL):
               * np.exp(-(Xgrid[None,:]-x0)**2/Lx**2 - Rgrid[:,None]**2/R**2) \
               * (abs(Rgrid[:,None]) < 3.5*R) * (abs(Xgrid[None,:]-x0) < 3.5*Lx)
 
-        self.fb_transform(comps=['Ez',],dir=0)
+        self.fb_transform(scals=['Ez',],dir=0)
         EE = self.DataDev['Ez_fb_m0'].get()
 
         DT = -1.j*w*np.sign(kx + (kx==0))
