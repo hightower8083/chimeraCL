@@ -37,17 +37,22 @@ class GridMethodsCL(GenericMethodsCL):
         self._project_scalar_knl = prg.project_scalar
         self._project_vec6_knl = prg.project_vec6
 
+        if 'vec_comps' not in self.Args:
+            self.Args['vec_comps'] = self.Args['default_vec_comps']
+
     def depose_scalar(self, parts, sclr, fld):
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr_4'])
 
         if parts.Args['Np'] <= 0:
             return
 
-        part_str = ['sort_indx','x','y','z',
-                     sclr,'cell_offset',]
+        part_str = ['sort_indx',] + self.Args['vec_comps'] + \
+                    [sclr, 'cell_offset',]
+
         grid_str = ['Nx', 'Xmin', 'dx_inv',
                      'Nr', 'Rmin', 'dr_inv',
                      'NxNr_4']
+
         fld_str = [fld+'_m'+str(m) for m in range(self.Args['M']+1)]
 
         args_part = [parts.DataDev[arg].data for arg in part_str]
@@ -63,9 +68,10 @@ class GridMethodsCL(GenericMethodsCL):
                                            i_off, *args,
                                            wait_for = [evnt,])
 
-    def depose_vector(self, parts, vec, factors,vec_fld):
-        part_str =  ['sort_indx','x','y','z'] + vec + factors + \
-                     ['cell_offset']
+    def depose_vector(self, parts, vec, factors, vec_fld):
+
+        part_str =  ['sort_indx',] + self.Args['vec_comps'] + vec + factors + \
+                     ['cell_offset',]
 
         grid_str = ['Nx', 'Xmin', 'dx_inv',
                      'Nr', 'Rmin', 'dr_inv',
@@ -73,7 +79,7 @@ class GridMethodsCL(GenericMethodsCL):
 
         fld_str = []
         for m in range(self.Args['M']+1):
-            for comp in ('x','y','z'):
+            for comp in self.Args['vec_comps']:
                 fld_str.append(vec_fld + comp + '_m' + str(m))
 
         args_part = [parts.DataDev[arg].data for arg in part_str]
@@ -124,7 +130,7 @@ class GridMethodsCL(GenericMethodsCL):
         args_raddiv_str =  ['NxNr','Nx','dV_inv']
         args_raddiv = [self.DataDev[arg].data for arg in args_raddiv_str]
 
-        for fld in [vec_fld + comp for comp in ('x','y','z')]:
+        for fld in [vec_fld + comp for comp in self.Args['vec_comps']]:
             # Correct near axis deposition
             args_fld = [self.DataDev[fld+'_m'+str(m)].data \
                          for m in range(self.Args['M']+1)]
@@ -150,7 +156,7 @@ class GridMethodsCL(GenericMethodsCL):
             enqueue_barrier(self.queue)
 
     def project_scalar(self, parts, sclr, fld):
-        part_str = ['sort_indx',sclr,'x','y','z','cell_offset']
+        part_str = ['sort_indx',sclr] + self.Args['vec_comps'] + ['cell_offset',]
 
         grid_str = ['Nx', 'Xmin', 'dx_inv',
                      'Nr', 'Rmin', 'dr_inv',
@@ -169,9 +175,9 @@ class GridMethodsCL(GenericMethodsCL):
 
     def project_vec6(self, parts, vecs, flds):
         part_str = ['sort_indx',] + \
-                   [vecs[0] + comp for comp in ('x','y','z')] + \
-                   [vecs[1] + comp for comp in ('x','y','z')] + \
-                   ['x','y','z','cell_offset',]
+                   [vecs[0] + comp for comp in self.Args['vec_comps']] + \
+                   [vecs[1] + comp for comp in self.Args['vec_comps']] + \
+                   self.Args['vec_comps'] + ['cell_offset',]
 
         grid_str = ['Nx', 'Xmin', 'dx_inv',
                     'Nr', 'Rmin', 'dr_inv',
@@ -180,7 +186,7 @@ class GridMethodsCL(GenericMethodsCL):
         fld_str = []
         for m in range(self.Args['M']+1):
             for fld in flds:
-                for comp in ('x','y','z'):
+                for comp in self.Args['vec_comps']:
                     fld_str.append(fld + comp + '_m' + str(m))
 
         args_parts = [parts.DataDev[arg].data for arg in part_str]

@@ -67,6 +67,8 @@ class GenericMethodsCL:
                 arg_dtype = np.double
             elif arg_type is np.ndarray:
                 arg_dtype = self.Args[arg].dtype
+            else:
+                continue
 
             self.DataDev[arg] = self.dev_arr(self.Args[arg],dtype=arg_dtype)
 

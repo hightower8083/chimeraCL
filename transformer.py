@@ -55,15 +55,17 @@ class Transformer(TransformerMethodsCL):
                 0.5 * kr_m * jn(m, Rgrid*kr_m))
 
     def _init_transformer_data_on_dev(self):
-        args_fld_init = ['rho',
-                         'Jx', 'Jy', 'Jz',
-                         'Ex', 'Ey', 'Ez',
-                         'Gx', 'Gy', 'Gz',
-                         'Bx', 'By', 'Bz',
-                         'dN0x', 'dN0y', 'dN0z',
-                         'dN1x', 'dN1y', 'dN1z']
 
-        for arg in args_fld_init:
+        flds_str = ['E', 'B', 'G', 'J', 'dN0', 'dN1']
+
+        flds_comps_str = []
+        for fld_str in flds_str:
+            for comp_str in self.Args['vec_comps']:
+                flds_comps_str.append(fld_str + comp_str)
+
+        flds_comps_str = ['rho',] + flds_comps_str
+
+        for arg in flds_comps_str:
             arg += '_fb_m'
             for m in range(self.Args['M']+1):
                 self.DataDev[arg+str(m)] = self.dev_arr(

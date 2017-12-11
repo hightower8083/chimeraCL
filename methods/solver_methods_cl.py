@@ -35,7 +35,7 @@ class SolverMethodsCL(GenericMethodsCL):
             mstr = '_fb_m'+str(m)
             fld_str = []
             for v in vecs:
-                for c in ('x','y','z'):
+                for c in self.Args['vec_comps']:
                     fld_str.append(v+c+mstr)
 
             args_solver = [self.DataDev[arg].data for arg in solver_str]

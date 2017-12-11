@@ -36,7 +36,7 @@ class TransformerMethodsCL(GenericMethodsCL):
         self._prepare_dot()
 
     def transform_field(self, arg_cmp, dir):
-        # prepare the phase shift
+        # do the phase shift
         WGS, WGS_tot = self.get_wgs(self.Args['Nx'])
         phs_shft = self.dev_arr(dtype=np.complex128, shape=self.Args['Nx'])
 
@@ -54,6 +54,17 @@ class TransformerMethodsCL(GenericMethodsCL):
             arg_in = arg_cmp + '_fb_m'
             arg_out = arg_cmp + '_m'
             self._transform_backward(dht_arg,arg_in,arg_out,phs_shft)
+
+    def get_field_rot(self, fld_in = 'B'):
+
+        fld_m1 = {}
+        for comp in ('x', 'y', 'z'):
+            fld_mm1[comp] = self._get_mm1(fld_in+comp)
+
+        for m in range(0,self.Args['M']+1):
+            
+            arg_in_m = arg_in + str(m)
+            arg_out_m = arg_out + str(m)
 
     def _transform_forward(self, dht_arg,arg_in,arg_out,phs_shft):
         dir = 0
@@ -144,13 +155,13 @@ class TransformerMethodsCL(GenericMethodsCL):
             enqueue_barrier(self.queue)
             self.DataDev[arg_out_m][1:] = buff2_clx
 
-    def _get_m1(self,fld_comp):
+    def _get_mm1(self,fld_comp):
         if self.Args['M']==0:
-            return
+            return None
 
         buff = empty_like(self.DataDev[fld_comp + '_fb_m1'])
 
-        arg_str = [fld_comp+'_fb_m1', 'Nx', 'NxNrm1',]
+        arg_str = [fld_comp + '_fb_m1', 'Nx', 'NxNrm1',]
         args = [buff.data,] + [self.DataDev[arg].data for arg in arg_str]
 
         WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])

@@ -8,9 +8,14 @@ class Grid(GridMethodsCL):
             self.import_comm(comm)
         self.set_global_working_group_size()
 
-        self.DataDev = {}
         self._process_configs(configs_in)
+
+        if 'vec_comps' not in self.Args:
+            self.Args['vec_comps'] = ['x','y','z']
+
         self.init_grid_methods()
+
+        self.DataDev = {}
         self.send_args_to_dev()
         self._init_grid_data_on_dev()
 
@@ -24,22 +29,40 @@ class Grid(GridMethodsCL):
         self.postproc_depose_scalar('rho')
 
     def depose_currents(self, species=[]):
+
+        current_args_str = []
         for m in range(self.Args['M']+1):
-            for arg in ['Jx', 'Jy', 'Jz']:
-                self.set_to_zero(self.DataDev[arg+'_m'+str(m)])
+            for comp_str in self.Args['vec_comps']:
+                current_args_str.append('J' + comp_str + '_m' + str(m))
+
+        momentum_args_str = []
+        for comp_str in self.Args['vec_comps']:
+            momentum_args_str.append('p' + comp_str)
+
+        for arg in current_args_str:
+            self.set_to_zero(self.DataDev[arg])
 
         for parts in species:
-            self.depose_vector(parts, ['px', 'py', 'pz'],
+            self.depose_vector(parts, momentum_args_str,
                                ['g_inv', 'w'], 'J')
 
         self.postproc_depose_vector('J')
 
     def project_fields(self, species=[]):
+
+        flds_str = ['E', 'B']
+
         for parts in species:
-            for arg in ['Ex', 'Ey', 'Ez', 'Bx', 'By', 'Bz']:
+            flds_comps_str = []
+            for fld_str in flds_str:
+                for comp_str in self.Args['vec_comps']:
+                    flds_comps_str.append(fld_str + comp_str)
+
+            for arg in flds_comps_str:
                 parts.DataDev[arg] = self.dev_arr(val=0, dtype=np.double,
                                                   shape=parts.Args['Np'])
-            self.project_vec6(parts, ['E', 'B'], ['E', 'B'])
+
+            self.project_vec6(parts, flds_str, flds_str)
 
     def _process_configs(self, configs_in):
         self.Args = configs_in
@@ -78,12 +101,17 @@ class Grid(GridMethodsCL):
         self.Args['NxNr_4'] = self.Args['Nr']//2 * self.Args['Nx']//2
 
     def _init_grid_data_on_dev(self):
-        args_fld_init = ['rho',
-                         'Ex', 'Ey', 'Ez',
-                         'Bx', 'By', 'Bz',
-                         'Jx', 'Jy', 'Jz']
 
-        for arg in args_fld_init:
+        flds_str = ['E', 'B', 'J']
+
+        flds_comps_str = []
+        for fld_str in flds_str:
+            for comp_str in self.Args['vec_comps']:
+                flds_comps_str.append(fld_str + comp_str)
+
+        flds_comps_str = ['rho',] + flds_comps_str
+
+        for arg in flds_comps_str:
             arg += '_m'
             self.DataDev[arg+'0'] = self.dev_arr(
                 val=0, dtype=np.double,

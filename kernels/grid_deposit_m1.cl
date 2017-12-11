@@ -1,7 +1,7 @@
 /// this is a source of grid kernels for chimeraCL project
 
 // Depose particles "weights" onto 2D grid via linear projection,
-// using groups of 4 cells and barrierd steps for each cell
+// using groups of 4 cells and barriered steps for each cell
 // in a group by calling kernel with different offsets: (0,1,2,3)
 // _______________________
 //|     |     |     |     |
@@ -39,7 +39,7 @@ __kernel void depose_scalar(
   uint i_cell = (uint) get_global_id(0);
   if (i_cell < *NxNr_4)
    {
-    // get cell number and period of 4cell-grid
+    // get numbers of cells and period of 4cell-grid
     uint Nx_grid = *Nx;
     uint Nx_cell = Nx_grid-1;
     uint Nx_2 = Nx_grid/2;

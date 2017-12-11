@@ -10,16 +10,17 @@ class Solver(Grid, Transformer, SolverMethodsCL):
     def __init__(self, configs_in, comm):
         if comm is not None:
             self.import_comm(comm)
+
         self.set_global_working_group_size()
 
-        self.DataDev = {}
         self._process_configs(configs_in)
+        self.Args['vec_comps'] = ['x','y','z']
 
         self.init_solver_methods()
-
         self.init_grid_methods()
-        self._init_grid_data_on_dev()
 
+        self.DataDev = {}
+        self._init_grid_data_on_dev()
         self.init_transformer()
         self.send_args_to_dev()
 
