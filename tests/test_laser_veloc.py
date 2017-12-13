@@ -4,6 +4,7 @@ import sys
 
 from chimeraCL.methods.generic_methods_cl import Communicator
 from chimeraCL.solver import Solver
+from chimeraCL.laser import add_gausian_pulse
 
 def run_test(answers=[],verb=False):
 
@@ -24,7 +25,7 @@ def run_test(answers=[],verb=False):
         'Lx':12., 'R':12., 'x_foc':20.}
 
     solver = Solver(configs_in=grid_in, comm=comm)
-    solver.add_gausian_pulse(laser=laser_in)
+    add_gausian_pulse(solver, laser=laser_in)
 
     xcentr1 = []
     xcentr2 = []
