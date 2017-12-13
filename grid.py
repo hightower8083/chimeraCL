@@ -59,9 +59,7 @@ class Grid(GridMethodsCL):
                     flds_comps_str.append(fld_str + comp_str)
 
             for arg in flds_comps_str:
-                parts.DataDev[arg] = self.dev_arr(val=0, dtype=np.double,
-                                                  shape=parts.Args['Np'])
-
+                self.set_to(parts.DataDev[arg], 0)
             self.project_vec6(parts, flds_str, flds_str)
 
     def _process_configs(self, configs_in):

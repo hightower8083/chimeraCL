@@ -62,13 +62,13 @@ class GenericMethodsCL:
                 continue
             self.DataDev[arg] = self.dev_arr(self.Args[arg],dtype=arg_dtype)
 
-    def dev_arr(self, val=None, shape=(1, ), dtype=np.double):
+    def dev_arr(self, val=None, shape=(1, ), dtype=np.double, allocator=None):
         if type(val) is np.ndarray:
             arr = self.thr.to_device(val)
         elif val==0:
-            arr = zeros(self.queue, shape, dtype=dtype)
+            arr = zeros(self.queue, shape, dtype=dtype, allocator=allocator)
         else:
-            arr = empty(self.queue, shape, dtype=dtype)
+            arr = empty(self.queue, shape, dtype=dtype, allocator=allocator)
             if val is not None:
                 self.set_to(arr,val)
         return arr

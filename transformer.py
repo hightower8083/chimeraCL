@@ -72,3 +72,5 @@ class Transformer(TransformerMethodsCL):
                 self.DataDev[arg+str(m)] = self.dev_arr(
                     val=0, dtype=np.complex128,
                     shape=(self.Args['Nr']-1, self.Args['Nx']))
+
+        self.phs_shft = self.dev_arr(dtype=np.complex128, shape=self.Args['Nx'])

@@ -38,9 +38,9 @@ class TransformerMethodsCL(GenericMethodsCL):
     def transform_field(self, arg_cmp, dir):
         # do the phase shift
         WGS, WGS_tot = self.get_wgs(self.Args['Nx'])
-        phs_shft = self.dev_arr(dtype=np.complex128, shape=self.Args['Nx'])
+#        phs_shft = self.dev_arr(dtype=np.complex128, shape=self.Args['Nx'])
 
-        args = [phs_shft.data, self.DataDev['kx'].data,
+        args = [self.phs_shft.data, self.DataDev['kx'].data,
                 np.double(self.Args['Xmin']), np.uint32(self.Args['Nx']) ]
         self._phase_knl[dir](self.queue, (WGS_tot, ), (WGS, ), *args).wait()
 
@@ -48,12 +48,12 @@ class TransformerMethodsCL(GenericMethodsCL):
             dht_arg = 'DHT_m'
             arg_in = arg_cmp + '_m'
             arg_out = arg_cmp + '_fb_m'
-            self._transform_forward(dht_arg,arg_in,arg_out,phs_shft)
+            self._transform_forward(dht_arg, arg_in, arg_out, self.phs_shft)
         elif dir == 1:
             dht_arg = 'DHT_inv_m'
             arg_in = arg_cmp + '_fb_m'
             arg_out = arg_cmp + '_m'
-            self._transform_backward(dht_arg,arg_in,arg_out,phs_shft)
+            self._transform_backward(dht_arg, arg_in, arg_out, self.phs_shft)
 
     def get_field_rot(self, fld_in, fld_out):
 

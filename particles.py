@@ -2,7 +2,7 @@ import numpy as np
 
 from chimeraCL.methods.particles_methods_cl import ParticleMethodsCL
 from chimeraCL.methods.particles_methods_cl import sqrt
-
+from pyopencl.tools import MemoryPool, ImmediateAllocator
 
 class Particles(ParticleMethodsCL):
     def __init__(self, configs_in, comm=None):
@@ -73,3 +73,8 @@ class Particles(ParticleMethodsCL):
 
         for arg in args_strs:
             self.DataDev[arg] = self.dev_arr(shape=0, dtype=np.double)
+
+        self.DataDev['indx_mempool'] = MemoryPool( ImmediateAllocator(self.comm.queue) )
+        self.DataDev['offset_mempool'] = MemoryPool( ImmediateAllocator(self.comm.queue) )
+        self.DataDev['sort_mempool'] = MemoryPool( ImmediateAllocator(self.comm.queue) )
+        self.DataDev['buffpart_mempool'] = MemoryPool( ImmediateAllocator(self.comm.queue) )

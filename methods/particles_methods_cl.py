@@ -56,18 +56,17 @@ class ParticleMethodsCL(GenericMethodsCL):
             self.DataDev[arg+'_new'] = None
 
         self.reset_num_parts()
-
-
+        self.realloc_field_arrays()
 
     def realloc_field_arrays(self):
         flds_comps_str = []
         for fld_str in ('E', 'B'):
-            for comp_str in self.Args['vec_comps']:
+            for comp_str in ('x', 'y', 'z'):
                 flds_comps_str.append(fld_str + comp_str)
 
         for arg in flds_comps_str:
             self.DataDev[arg] = self.dev_arr(val=0, dtype=np.double,
-                                             shape=parts.Args['Np'])
+                                             shape=self.Args['Np'])
 
     def make_new_domain(self, parts_in):
         args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w']
@@ -192,10 +191,12 @@ class ParticleMethodsCL(GenericMethodsCL):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
         indx_in_cell = self.dev_arr(dtype=np.uint32,
-                                    shape=self.Args['Np'])
+                                    shape=self.Args['Np'],
+                                    allocator=self.DataDev['indx_mempool'])
 
         self.DataDev['cell_offset'] = self.dev_arr(val=0, dtype=np.uint32,
-                                                   shape=grid.Args['Nxm1Nrm1'])
+                                        shape=grid.Args['Nxm1Nrm1'],
+                                        allocator=self.DataDev['offset_mempool'])
 
         part_strs =  ['x', 'y', 'z', 'cell_offset', 'Np']
         grid_strs =  ['Nx', 'Xmin', 'dx_inv',
@@ -211,17 +212,15 @@ class ParticleMethodsCL(GenericMethodsCL):
         if self.comm.sort_method == 'Radix':
             indx_size = indx_in_cell.size
             self.DataDev['sort_indx'] = arange(self.queue, 0, indx_size, 1,
-                                               dtype=np.uint32)
+                         dtype=np.uint32, allocator=self.DataDev['sort_mempool'])
 
             (indx_in_cell, self.DataDev['sort_indx']), evnt = \
-              self._sort_rdx_knl(indx_in_cell,
-                                 self.DataDev['sort_indx'], )
+              self._sort_rdx_knl(indx_in_cell, self.DataDev['sort_indx'])
             evnt.wait()
         elif self.comm.sort_method == 'NumPy':
                 self.DataDev['sort_indx'] = indx_in_cell.get().argsort()
                 self.DataDev['sort_indx'] = to_device(
                     self.queue, self.DataDev['sort_indx'])
-
 
     def align_and_damp(self, comps_align):
         num_staying = self.DataDev['cell_offset'][-1].get().item()
@@ -235,16 +234,17 @@ class ParticleMethodsCL(GenericMethodsCL):
 
         WGS, WGS_tot = self.get_wgs(num_staying)
         for comp in comps_align:
-            buff = self.dev_arr(dtype=self.DataDev[comp].dtype,
-                                shape=(num_staying,))
+            buff_parts = self.dev_arr(dtype=self.DataDev[comp].dtype,
+              shape=(num_staying,), allocator=self.DataDev['buffpart_mempool'])
             self._data_align_dbl_knl(self.queue, (WGS_tot, ), (WGS, ),
-                                     self.DataDev[comp].data, buff.data,
+                                     self.DataDev[comp].data,
+                                     buff_parts.data,
                                      self.DataDev['sort_indx'].data,
                                      np.uint32(num_staying)).wait()
-            self.DataDev[comp] = buff
+            self.DataDev[comp] = buff_parts
 
         self.DataDev['sort_indx'] = arange(self.queue, 0, num_staying, 1,
-                                           dtype=np.uint32)
+            dtype=np.uint32, allocator=self.DataDev['sort_mempool'])
         self.reset_num_parts()
 
     def _fill_arr_randn(self, arr, mu=0, sigma=1):
@@ -257,7 +257,8 @@ class ParticleMethodsCL(GenericMethodsCL):
 
     def _cumsum(self,arr_in):
         evnt, arr_tmp = cumsum(arr_in, return_event=True, queue=self.queue)
-        arr_out = self.dev_arr(dtype=np.uint32, shape=arr_tmp.size+1)
+        arr_out = self.dev_arr(dtype=np.uint32, shape=arr_tmp.size+1,
+                               allocator=self.DataDev['sort_mempool'])
         arr_out[0] = 0
         evnt.wait()
         arr_out[1:] = arr_tmp[:]
