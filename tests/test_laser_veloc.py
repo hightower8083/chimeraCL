@@ -31,7 +31,7 @@ def run_test(answers=[],verb=False):
 
     for i in range(100):
         solver.push_fields()
-        solver.fb_transform(comps=['Ez',],dir=1)
+        solver.fb_transform(scals=['Ez', ], dir=1)
 
         var0 = np.real(solver.DataDev['Ez_m0'].get())
         Px = (solver.Args['Rgrid'][1:,None]*var0[1:,:]**2).sum(0)

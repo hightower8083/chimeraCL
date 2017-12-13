@@ -55,16 +55,28 @@ class TransformerMethodsCL(GenericMethodsCL):
             arg_out = arg_cmp + '_m'
             self._transform_backward(dht_arg,arg_in,arg_out,phs_shft)
 
-    def get_field_rot(self, fld_in = 'B'):
+    def get_field_rot(self, fld_in, fld_out):
 
-        fld_m1 = {}
+        fld_mm1 = {}
         for comp in ('x', 'y', 'z'):
             fld_mm1[comp] = self._get_mm1(fld_in+comp)
 
+        buff1 = empty_like(fld_mm1['x'])
+        buff2 = empty_like(buff1)
+
         for m in range(0,self.Args['M']+1):
-            
-            arg_in_m = arg_in + str(m)
-            arg_out_m = arg_out + str(m)
+            fld_x_m_out = fld_out + 'x' + str(m)
+            fld_y_m_out = fld_out + 'y' + str(m)
+            fld_z_m_out = fld_out + 'z' + str(m)
+
+            if (m<self.Args['M']):
+                fld_x = fld_in + 'x' + str(m+1)
+                fld_y = fld_in + 'y' + str(m+1)
+                fld_z = fld_in + 'z' + str(m+1)
+
+                self.axpbyz(1, self.DataDev[fld_z],
+                            1.j, self.DataDev[fld_y], buff1)
+                buff2 = self._cdot(self.DataDev['dDHT_plus_m'+str(m)], buff1)
 
     def _transform_forward(self, dht_arg,arg_in,arg_out,phs_shft):
         dir = 0
@@ -72,7 +84,7 @@ class TransformerMethodsCL(GenericMethodsCL):
 
         # DHT of 0 mode into a temporal array
         buff1_dbl = self.DataDev[arg_in+'0'][1:].copy()
-        buff2_dbl = self._dot0(self.DataDev[dht_arg+'0'], buff1_dbl)
+        buff2_dbl = self._ddot(self.DataDev[dht_arg+'0'], buff1_dbl)
         enqueue_barrier(self.queue)
 
         # FFT of 0 mode casted to complex dtype
@@ -96,7 +108,7 @@ class TransformerMethodsCL(GenericMethodsCL):
             # DHT of m mode into a temporal array
             buff1_clx = self.DataDev[arg_in_m][1:,:].copy()
 
-            self.DataDev[arg_out_m] = self._dot1(
+            self.DataDev[arg_out_m] = self._cdot(
                 self.DataDev[dht_arg+str(m)], buff1_clx)
             enqueue_barrier(self.queue)
 
@@ -130,7 +142,7 @@ class TransformerMethodsCL(GenericMethodsCL):
         self.cast_array_c2d(buff1_clx, buff1_dbl)
 
         # DHT of 0 mode
-        buff2_dbl = self._dot0(self.DataDev[dht_arg+'0'], buff1_dbl)
+        buff2_dbl = self._ddot(self.DataDev[dht_arg+'0'], buff1_dbl)
         enqueue_barrier(self.queue)
         self.DataDev[arg_out+'0'][1:] = buff2_dbl
 
@@ -151,7 +163,7 @@ class TransformerMethodsCL(GenericMethodsCL):
             buff1_clx = self._fft(buff1_clx, dir=dir)
 
             # DHT of m mode
-            buff2_clx = self._dot1(self.DataDev[dht_arg+str(m)], buff1_clx)
+            buff2_clx = self._cdot(self.DataDev[dht_arg+str(m)], buff1_clx)
             enqueue_barrier(self.queue)
             self.DataDev[arg_out_m][1:] = buff2_clx
 
@@ -171,8 +183,12 @@ class TransformerMethodsCL(GenericMethodsCL):
 
     def _prepare_dot(self):
         input_array_c = self.dev_arr(dtype=np.complex128,
-                                     shape=(self.Args['Nr']-1, self.Args['Nx']))
-        input_array_d = input_array_c.real
+                                     shape=(self.Args['Nr']-1,
+                                            self.Args['Nx']))
+
+        input_array_d = self.dev_arr(dtype=np.double,
+                                     shape=(self.Args['Nr']-1,
+                                            self.Args['Nx']))
 
         input_transform = self.dev_arr(dtype=np.double,
                                        shape=(self.Args['Nr']-1,
@@ -186,18 +202,18 @@ class TransformerMethodsCL(GenericMethodsCL):
             self._dot_knl = MatrixMul(input_transform, input_array_c,
                                       out_arr=input_array_c \
                                      ).compile(self.thr, fast_math=True)
-            def dot0_wrp(a, b):
+            def ddot_wrp(a, b):
                 c = empty_like(b)
                 self._dot0_knl(c, a, b)
                 return c
 
-            def dot1_wrp(a, b):
+            def cdot_wrp(a, b):
                 c = empty_like(b)
                 self._dot_knl(c, a, b)
                 return c
 
-            self._dot0 = dot0_wrp
-            self._dot1  = dot1_wrp
+            self._ddot = ddot_wrp
+            self._cdot  = cdot_wrp
 
         elif self.comm.dot_method=='NumPy':
             def dot_wrp(a, b):
@@ -205,12 +221,14 @@ class TransformerMethodsCL(GenericMethodsCL):
                 c = to_device(self.queue, c)
                 return c
 
-            self._dot0 = dot_wrp
-            self._dot1  = dot_wrp
+            self._ddot = dot_wrp
+            self._cdot  = dot_wrp
 
     def _prepare_fft(self):
         input_array_c = self.dev_arr(dtype=np.complex128,
-                                     shape=(self.Args['Nr']-1, self.Args['Nx']))
+                                     shape=(self.Args['Nr']-1,
+                                     self.Args['Nx']))
+
         if self.comm.fft_method=='pyFFTW':
             from pyfftw import empty_aligned,FFTW
 
@@ -220,10 +238,12 @@ class TransformerMethodsCL(GenericMethodsCL):
                         dtype=np.complex128, n=16)
             self._fft_knl = [FFTW(input_array=self.arr_fft_in,
                               output_array=self.arr_fft_out,
-                              direction = 'FFTW_FORWARD', threads=4,axes=(1,)),
-                         FFTW(input_array=self.arr_fft_in,
+                              direction = 'FFTW_FORWARD', threads=4,
+                              axes=(1, )),
+                             FFTW(input_array=self.arr_fft_in,
                               output_array=self.arr_fft_out,
-                              direction = 'FFTW_BACKWARD', threads=4,axes=(1,))]
+                              direction = 'FFTW_BACKWARD', threads=4,
+                              axes=(1, ))]
             def _fft(arr, dir=0):
                 self.arr_fft_in[:] = arr.get()
                 self._fft_knl[dir]()

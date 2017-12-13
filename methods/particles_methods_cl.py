@@ -57,6 +57,18 @@ class ParticleMethodsCL(GenericMethodsCL):
 
         self.reset_num_parts()
 
+
+
+    def realloc_field_arrays(self):
+        flds_comps_str = []
+        for fld_str in ('E', 'B'):
+            for comp_str in self.Args['vec_comps']:
+                flds_comps_str.append(fld_str + comp_str)
+
+        for arg in flds_comps_str:
+            self.DataDev[arg] = self.dev_arr(val=0, dtype=np.double,
+                                             shape=parts.Args['Np'])
+
     def make_new_domain(self, parts_in):
         args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w']
 

@@ -21,7 +21,7 @@ class Grid(GridMethodsCL):
 
     def depose_charge(self, species=[]):
         for m in range(self.Args['M']+1):
-            self.set_to_zero(self.DataDev['rho_m'+str(m)])
+            self.set_to(self.DataDev['rho_m'+str(m)], 0)
 
         for parts in species:
             self.depose_scalar(parts, 'w', 'rho')
@@ -40,7 +40,7 @@ class Grid(GridMethodsCL):
             momentum_args_str.append('p' + comp_str)
 
         for arg in current_args_str:
-            self.set_to_zero(self.DataDev[arg])
+            self.set_to(self.DataDev[arg], 0)
 
         for parts in species:
             self.depose_vector(parts, momentum_args_str,

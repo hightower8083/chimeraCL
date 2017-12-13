@@ -4,7 +4,6 @@ import sys
 
 from chimeraCL.methods.generic_methods_cl import Communicator
 from chimeraCL.particles import Particles
-#from chimeraCL.grid import Grid
 from chimeraCL.solver import Solver
 
 def run_test(dims=(1024,256),Np=2e6,answers=[],verb=False,
@@ -34,8 +33,8 @@ def run_test(dims=(1024,256),Np=2e6,answers=[],verb=False,
     tmp1 = grid.DataDev['rho_m1'].get().copy()
 
     grid.fb_transform(scals = ['rho',],dir=0)
-    grid.set_to_zero(grid.DataDev['rho_m0'])
-    grid.set_to_zero(grid.DataDev['rho_m1'])
+    grid.set_to(grid.DataDev['rho_m0'], 0)
+    grid.set_to(grid.DataDev['rho_m1'], 0)
     grid.fb_transform(scals = ['rho',],dir=1)
 
     err_xr = (np.abs(grid.DataDev['rho_m0'].get()-tmp0)[1:] /

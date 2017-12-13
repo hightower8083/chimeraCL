@@ -29,8 +29,9 @@ class GenericMethodsCL:
         prg = Program(self.ctx, generic_sources).\
             build(options=compiler_options)
 
-        self._set_cdouble_to_zero_knl = prg.set_cdouble_to_zero
         self._cast_array_d2c_knl = prg.cast_array_d2c
+        self._axpbyz_c2c_knl = prg.axpbyz_c2c
+        self._set_cdouble_to_knl = prg.set_cdouble_to
 
     def set_global_working_group_size(self):
         if self.dev_type=='CPU':
@@ -48,16 +49,6 @@ class GenericMethodsCL:
             WGS = self.WGS
             return WGS, WGS_tot
 
-    def dev_arr(self, val=None, shape=(1, ), dtype=np.double):
-        if type(val) is np.ndarray:
-            arr = self.thr.to_device(val)
-        elif val==0:
-            arr = zeros(self.queue, shape, dtype=dtype)
-        else:
-            arr = empty(self.queue, shape, dtype=dtype)
-            if val is not None: arr.fill(val)
-        return arr
-
     def send_args_to_dev(self):
         for arg in self.Args.keys():
             arg_type = type(self.Args[arg])
@@ -69,18 +60,18 @@ class GenericMethodsCL:
                 arg_dtype = self.Args[arg].dtype
             else:
                 continue
-
             self.DataDev[arg] = self.dev_arr(self.Args[arg],dtype=arg_dtype)
 
-    def set_to_zero(self, arr):
-        if arr.dtype != np.complex128:
-            arr[:] = 0
-            enqueue_barrier(self.queue)
+    def dev_arr(self, val=None, shape=(1, ), dtype=np.double):
+        if type(val) is np.ndarray:
+            arr = self.thr.to_device(val)
+        elif val==0:
+            arr = zeros(self.queue, shape, dtype=dtype)
         else:
-            arr_size = arr.size
-            WGS, WGS_tot = self.get_wgs(arr_size)
-            self._set_cdouble_to_zero_knl(self.queue, (WGS_tot, ), (WGS, ),
-                                          arr.data, np.uint32(arr_size)).wait()
+            arr = empty(self.queue, shape, dtype=dtype)
+            if val is not None:
+                self.set_to(arr,val)
+        return arr
 
     def cast_array_c2d(self,arr_in, arr_out):
         arr_size = arr_in.size
@@ -88,6 +79,25 @@ class GenericMethodsCL:
         self._cast_array_d2c_knl(self.queue,(WGS_tot,),(WGS,),
                                  arr_in.data, arr_out.data,
                                  np.uint32(arr_size)).wait()
+
+    def set_to(self,arr,val):
+        if self.dev_type=='CPU' and arr.dtype == np.complex128:
+            # just a workaround the stupid Apple CL implementation for CPU..
+            arr_size = arr.size
+            WGS, WGS_tot = self.get_wgs(arr_size)
+            self._set_cdouble_to_knl(self.queue, (WGS_tot, ), (WGS, ),
+                                     arr.data, np.complex128(val),
+                                     np.uint32(arr_size)).wait()
+        else:
+            arr.fill(val)
+
+    def axpbyz(self, a,x,b,y,z):
+        arr_size = x.size
+        WGS, WGS_tot = self.get_wgs(arr_size)
+        self._axpbyz_c2c_knl(self.queue,(WGS_tot,),(WGS,),
+                             np.complex128(a),x.data,
+                             np.complex128(b),y.data,
+                             z.data, np.uint32(arr_size) ).wait()
 
     def import_comm(self,comm):
         self.comm = comm
