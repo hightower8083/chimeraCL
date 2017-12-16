@@ -22,8 +22,8 @@ class Solver(Grid, Transformer, SolverMethodsCL):
         self.DataDev = {}
         self._init_grid_data_on_dev()
         self.init_transformer()
-        self.send_args_to_dev()
 
+        self.send_args_to_dev()
         self._make_ms_coefficients()
 
     def push_fields(self):

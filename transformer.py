@@ -6,10 +6,10 @@ from chimeraCL.methods.transformer_methods_cl import TransformerMethodsCL
 
 class Transformer(TransformerMethodsCL):
     def init_transformer(self):
+        self._init_transformer_data_on_dev()
         self.init_transformer_methods()
         self._make_spectral_axes()
         self._make_DHT()
-        self._init_transformer_data_on_dev()
 
     def fb_transform(self, scals=[], vects=[], dir=0):
         for sclr in scals:
@@ -73,4 +73,27 @@ class Transformer(TransformerMethodsCL):
                     val=0, dtype=np.complex128,
                     shape=(self.Args['Nr']-1, self.Args['Nx']))
 
-        self.phs_shft = self.dev_arr(dtype=np.complex128, shape=self.Args['Nx'])
+        for comp in self.Args['vec_comps']:
+            self.DataDev['mode_m1_' + comp] = self.dev_arr(dtype=np.complex128,
+                shape=(self.Args['Nr']-1, self.Args['Nx']))
+
+        self.DataDev['phs_shft'] = self.dev_arr(dtype=np.complex128,
+                                                shape=self.Args['Nx'])
+
+        buff_dtypes = {'d':np.double, 'c':np.complex128}
+        for buff_i in range(2):
+            for buff_dtype in buff_dtypes.keys():
+                arg_str = '_'.join(('fld', 'buff'+str(buff_i), buff_dtype))
+                self.DataDev[arg_str] = self.dev_arr(
+                    shape=(self.Args['Nr']-1, self.Args['Nx']),
+                    dtype=buff_dtypes[buff_dtype] )
+
+#        self.buff0_fld_d = self.dev_arr(dtype=np.double,
+#            shape=(self.Args['Nr']-1, self.Args['Nx']))
+#        self.buff1_fld_d = self.dev_arr(dtype=np.double,
+#            shape=(self.Args['Nr']-1, self.Args['Nx']))
+
+#        self.buff0_fld_c = self.dev_arr(dtype=np.complex128,
+#            shape=(self.Args['Nr']-1, self.Args['Nx']))
+#        self.buff1_fld_c = self.dev_arr(dtype=np.complex128,
+#            shape=(self.Args['Nr']-1, self.Args['Nx']))
