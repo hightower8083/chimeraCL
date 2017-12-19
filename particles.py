@@ -35,7 +35,7 @@ class Particles(ParticleMethodsCL):
             return
 
         self.align_and_damp(
-            comps_align = ['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv', 'w'], )
+            comps_align=['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv', 'w'])
 
     def _process_configs(self, configs_in):
         self.Args = configs_in
@@ -72,9 +72,28 @@ class Particles(ParticleMethodsCL):
         args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w','g_inv']
 
         for arg in args_strs:
-            self.DataDev[arg] = self.dev_arr(shape=0, dtype=np.double)
+            for tmp_type in ('', '_new'):
+                self.DataDev[arg + tmp_type + '_mp'] = \
+                    MemoryPool(ImmediateAllocator(self.comm.queue))
 
-        self.DataDev['indx_mempool'] = MemoryPool( ImmediateAllocator(self.comm.queue) )
-        self.DataDev['offset_mempool'] = MemoryPool( ImmediateAllocator(self.comm.queue) )
-        self.DataDev['sort_mempool'] = MemoryPool( ImmediateAllocator(self.comm.queue) )
-        self.DataDev['buffpart_mempool'] = MemoryPool( ImmediateAllocator(self.comm.queue) )
+                self.DataDev[arg + tmp_type] = self.dev_arr(shape=0,
+                    allocator=self.DataDev[arg + tmp_type + '_mp'],
+                    dtype=np.double)
+
+        flds_comps_str = []
+        for fld_str in ('E', 'B'):
+            for comp_str in ('x', 'y', 'z'):
+                flds_comps_str.append(fld_str + comp_str)
+
+        for arg in flds_comps_str:
+            self.DataDev[arg + '_mp'] = \
+                MemoryPool(ImmediateAllocator(self.comm.queue))
+
+            self.DataDev[arg] = self.dev_arr(shape=0,
+                allocator=self.DataDev[arg + '_mp'],
+                dtype=np.double)
+
+        for arg in ['cell_offset', 'Xgrid_loc', 'Rgrid_loc', 'theta_variator',
+                    'indx_in_cell', 'sort_indx']:
+            self.DataDev[arg + '_mp'] = \
+                MemoryPool(ImmediateAllocator(self.comm.queue))

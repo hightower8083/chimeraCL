@@ -26,6 +26,7 @@ def run_test(dims=(1024,256),Np=2e6,answers=[],verb=False,
     parts.add_particles(beam_in=parts_in)
     parts.sort_parts(grid=grid)
     parts.align_parts()
+    parts.realloc_field_arrays()
 
     xx = parts.DataDev['x'].get()
     rr = np.sqrt(parts.DataDev['y'].get()**2 + parts.DataDev['z'].get()**2)
