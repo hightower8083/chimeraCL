@@ -47,6 +47,7 @@ class Transformer(TransformerMethodsCL):
             self.Args['w_m'+str(m)] = np.sqrt(
                 self.Args['kx'][None,:]**2
                 + self.Args['kr_m'+str(m)][:,None]**2)
+            self.Args['Poiss_m'+str(m)] = 1./self.Args['w_m'+str(m)]**2
 
     def _make_DHT(self):
         """
@@ -93,8 +94,8 @@ class Transformer(TransformerMethodsCL):
 
         # allocate the buffer for the mode m=-1
         for comp in self.Args['vec_comps']:
-            self.DataDev['fld_m-1_' + comp] = self.dev_arr(dtype=np.complex128,
-                shape=(self.Args['Nr']-1, self.Args['Nx']))
+            self.DataDev['buff_fb_m-1_' + comp] = self.dev_arr(
+                dtype=np.complex128, shape=(self.Args['Nr']-1, self.Args['Nx']))
 
         # allocate the buffer to keep phase shift data exp(i*kx*x0)
         self.DataDev['phs_shft'] = self.dev_arr(dtype=np.complex128,

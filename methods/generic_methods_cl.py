@@ -31,7 +31,11 @@ class GenericMethodsCL:
 
         self._cast_array_d2c_knl = prg.cast_array_d2c
         self._axpbyz_c2c_knl = prg.axpbyz_c2c
+        self._zpaxz_c2c_knl = prg.zpaxz_c2c
+        self._ab_dot_x_knl =  prg.ab_dot_x
+        self._append_c2c_knl = prg.append_c2c
         self._set_cdouble_to_knl = prg.set_cdouble_to
+        self._mult_elementwise_knl = prg.mult_elementwise_d2c
 
     def set_global_working_group_size(self):
         if self.dev_type=='CPU':
@@ -76,11 +80,25 @@ class GenericMethodsCL:
     def cast_array_c2d(self,arr_in, arr_out):
         arr_size = arr_in.size
         WGS, WGS_tot = self.get_wgs(arr_size)
-        self._cast_array_d2c_knl(self.queue,(WGS_tot,),(WGS,),
+        self._cast_array_d2c_knl(self.queue, (WGS_tot, ), (WGS, ),
                                  arr_in.data, arr_out.data,
                                  np.uint32(arr_size)).wait()
 
-    def set_to(self,arr,val):
+    def append_c2c(self, arr_base, arr_add):
+        arr_size = arr_base.size
+        WGS, WGS_tot = self.get_wgs(arr_size)
+        self._append_c2c_knl(self.queue, (WGS_tot, ), (WGS, ),
+                             arr_base.data, arr_add.data,
+                             np.uint32(arr_size)).wait()
+
+    def mult_elementwise(self, x, z):
+        arr_size = x.size
+        WGS, WGS_tot = self.get_wgs(arr_size)
+        self._mult_elementwise_knl(self.queue, (WGS_tot, ), (WGS, ),
+                                   x.data, z.data, np.uint32(arr_size)
+                                  ).wait()
+
+    def set_to(self, arr, val):
         if self.dev_type=='CPU' and arr.dtype == np.complex128:
             # just a workaround the stupid Apple CL implementation for CPU..
             arr_size = arr.size
@@ -91,15 +109,31 @@ class GenericMethodsCL:
         else:
             arr.fill(val)
 
-    def axpbyz(self, a,x,b,y,z):
+    def axpbyz(self, a, x, b, y, z):
         arr_size = x.size
         WGS, WGS_tot = self.get_wgs(arr_size)
-        self._axpbyz_c2c_knl(self.queue,(WGS_tot,),(WGS,),
-                             np.complex128(a),x.data,
-                             np.complex128(b),y.data,
+        self._axpbyz_c2c_knl(self.queue, (WGS_tot, ), (WGS, ),
+                             np.complex128(a), x.data,
+                             np.complex128(b), y.data,
                              z.data, np.uint32(arr_size) ).wait()
 
-    def import_comm(self,comm):
+    def zpaxz(self, z, a, x):
+        arr_size = x.size
+        WGS, WGS_tot = self.get_wgs(arr_size)
+        self._zpaxz_c2c_knl(self.queue, (WGS_tot, ), (WGS, ),
+                            np.complex128(a), x.data,
+                            z.data, np.uint32(arr_size) ).wait()
+
+
+    def ab_dot_x(self, a, b, x, z):
+        arr_size = x.size
+        WGS, WGS_tot = self.get_wgs(arr_size)
+        self._ab_dot_x_knl(self.queue, (WGS_tot, ), (WGS, ),
+                           np.complex128(a), b.data, x.data,
+                           z.data, np.uint32(self.Args['NxNrm1']),
+                           np.uint32(self.Args['Nx']) ).wait()
+
+    def import_comm(self, comm):
         self.comm = comm
         self.queue = comm.queue
         self.ctx = comm.ctx

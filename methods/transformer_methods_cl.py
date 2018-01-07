@@ -56,28 +56,90 @@ class TransformerMethodsCL(GenericMethodsCL):
             self._transform_backward(dht_arg, arg_in, arg_out,
                                      self.DataDev['phs_shft'])
 
-    def get_field_rot(self, fld_in, fld_out):
+    def vec_field_poiss(self, fld):
+        for m in range(0,self.Args['M']+1):
+            for comp in self.Args['vec_comps']:
+                fld_arg = fld + comp + '_fb_m' + str(m)
+                self.mult_elementwise(self.DataDev['Poiss_m'+ str(m)],
+                                      self.DataDev[fld_arg])
 
-        fld_mm1 = {}
-        for comp in ('x', 'y', 'z'):
-            fld_mm1[comp] = self._get_mm1(fld_in+comp)
+    def field_rot(self, fld_in, fld_out):
 
-        buff1 = empty_like(fld_mm1['x'])
-        buff2 = empty_like(buff1)
+        self._get_mm1(fld_in)
 
         for m in range(0,self.Args['M']+1):
-            fld_x_m_out = fld_out + 'x' + str(m)
-            fld_y_m_out = fld_out + 'y' + str(m)
-            fld_z_m_out = fld_out + 'z' + str(m)
+            fld_x_m_out = fld_out + 'x' + '_fb_m' + str(m)
+            fld_y_m_out = fld_out + 'y' + '_fb_m' + str(m)
+            fld_z_m_out = fld_out + 'z' + '_fb_m' + str(m)
 
-            if (m<self.Args['M']):
-                fld_x = fld_in + 'x' + str(m+1)
-                fld_y = fld_in + 'y' + str(m+1)
-                fld_z = fld_in + 'z' + str(m+1)
+            for fld in (fld_x_m_out, fld_y_m_out, fld_z_m_out):
+                self.set_to(self.DataDev[fld], 0.0)
+
+            self.ab_dot_x(-1.j, self.DataDev['kx'],
+                          self.DataDev[fld_in+'z'+'_fb_m'+str(m)],
+                          self.DataDev[fld_y_m_out])
+
+            self.ab_dot_x(1.j, self.DataDev['kx'],
+                          self.DataDev[fld_in+'y'+'_fb_m'+str(m)],
+                          self.DataDev[fld_z_m_out])
+
+            # m-1 cmoponents
+            if m > 1:
+                fld_x = fld_in + 'x' + '_fb_m' + str(m-1)
+                fld_y = fld_in + 'y' + '_fb_m' + str(m-1)
+                fld_z = fld_in + 'z' + '_fb_m' + str(m-1)
+            else:
+                fld_x = 'buff_fb_m-1_x'
+                fld_y = 'buff_fb_m-1_y'
+                fld_z = 'buff_fb_m-1_z'
+
+            self.axpbyz(-1, self.DataDev[fld_z],
+                        1.j, self.DataDev[fld_y],
+                        self.DataDev['fld_buff0_c'])
+
+            self._cdot(self.DataDev['fld_buff1_c'],
+                       self.DataDev['dDHT_minus_m'+str(m)],
+                       self.DataDev['fld_buff0_c'] )
+
+            self.append_c2c(self.DataDev[fld_x_m_out],
+                            self.DataDev['fld_buff1_c'])
+
+            self._cdot(self.DataDev['fld_buff0_c'],
+                       self.DataDev['dDHT_minus_m'+str(m)],
+                       self.DataDev[fld_x] )
+
+            self.zpaxz(self.DataDev[fld_y_m_out],
+                       -1.j, self.DataDev['fld_buff0_c'])
+
+            self.zpaxz(self.DataDev[fld_z_m_out],
+                       1, self.DataDev['fld_buff0_c'])
+
+            # m+1 cmoponents
+            if m < self.Args['M']:
+                fld_x = fld_in + 'x' + '_fb_m' + str(m+1)
+                fld_y = fld_in + 'y' + '_fb_m' + str(m+1)
+                fld_z = fld_in + 'z' + '_fb_m' + str(m+1)
 
                 self.axpbyz(1, self.DataDev[fld_z],
-                            1.j, self.DataDev[fld_y], buff1)
-                buff2 = self._cdot(self.DataDev['dDHT_plus_m'+str(m)], buff1)
+                            1.j, self.DataDev[fld_y],
+                            self.DataDev['fld_buff0_c'])
+
+                self._cdot(self.DataDev['fld_buff1_c'],
+                           self.DataDev['dDHT_plus_m'+str(m)],
+                           self.DataDev['fld_buff0_c'] )
+
+                self.append_c2c(self.DataDev[fld_x_m_out],
+                                self.DataDev['fld_buff1_c'])
+
+                self._cdot(self.DataDev['fld_buff0_c'],
+                           self.DataDev['dDHT_plus_m'+str(m)],
+                           self.DataDev[fld_x] )
+
+                self.zpaxz(self.DataDev[fld_y_m_out],
+                           -1.j, self.DataDev['fld_buff0_c'])
+
+                self.zpaxz(self.DataDev[fld_z_m_out],
+                           -1, self.DataDev['fld_buff0_c'])
 
     def _transform_forward(self, dht_arg, arg_in, arg_out, phs_shft):
         dir = 0
@@ -180,7 +242,7 @@ class TransformerMethodsCL(GenericMethodsCL):
 
         for comp in self.Args['vec_comps']:
             arg_str = [fld + comp + '_fb_m1', 'Nx', 'NxNrm1',]
-            args = [self.self.DataDev['mode_m1_' + comp].data,] \
+            args = [self.DataDev['buff_fb_m-1_' + comp].data,] \
                    + [self.DataDev[arg].data for arg in arg_str]
 
             WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
