@@ -186,7 +186,7 @@ class ParticleMethodsCL(GenericMethodsCL):
 
         args_strs =  ['px','py','pz','g_inv',
                       'Ex','Ey','Ez',
-                      'Bx','By','Bz','dt','Np']
+                      'Bx','By','Bz','2pidt','Np']
 
         args = [self.DataDev[arg].data for arg in args_strs]
         self._push_p_boris_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()

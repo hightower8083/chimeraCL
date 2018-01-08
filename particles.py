@@ -45,8 +45,6 @@ class Particles(ParticleMethodsCL):
         if 'dt' not in self.Args:
             self.Args['dt'] = 1.
 
-        self.Args['dt'] *= 2 * np.pi
-
         if 'charge' not in self.Args:
             self.Args['charge'] = -1.
 
@@ -68,6 +66,7 @@ class Particles(ParticleMethodsCL):
 
         self.Args['right_lim'] = 0.0
 
+        self.Args['2pidt'] = 2 * np.pi * self.Args['dt']
         self.Args['dt_2'] = 0.5*self.Args['dt']
         # self.Args['dt_inv'] = 1./self.Args['dt']
 
