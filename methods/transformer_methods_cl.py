@@ -84,7 +84,7 @@ class TransformerMethodsCL(GenericMethodsCL):
                           self.DataDev[fld_z_m_out])
 
             # m-1 cmoponents
-            if m > 1:
+            if m > 0:
                 fld_x = fld_in + 'x' + '_fb_m' + str(m-1)
                 fld_y = fld_in + 'y' + '_fb_m' + str(m-1)
                 fld_z = fld_in + 'z' + '_fb_m' + str(m-1)

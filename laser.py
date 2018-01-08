@@ -32,3 +32,7 @@ def add_gausian_pulse(solver, laser):
 
     solver.DataDev['Ez_fb_m0'][:] = EE
     solver.DataDev['Gz_fb_m0'][:] = GG
+
+    solver.field_rot('G', 'B')
+    solver.vec_field_poiss('B')
+    solver.fb_transform(vects=['B', 'E'],dir=1)

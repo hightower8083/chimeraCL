@@ -116,12 +116,12 @@ __kernel void push_p_boris(
   uint ip = (uint) get_global_id(0);
   if (ip < *num_p)
    {
-    double u_p[3] = {px[ip],py[ip],pz[ip]};
-    double E_p[3] = {Ex[ip],Ey[ip],Ez[ip]};
-    double B_p[3] = {Bx[ip],By[ip],Bz[ip]};
+    double u_p[3] = {px[ip], py[ip], pz[ip]};
+    double E_p[3] = {Ex[ip], Ey[ip], Ez[ip]};
+    double B_p[3] = {Bx[ip], By[ip], Bz[ip]};
 
     double dt_2 = 0.5*(*dt);
-    double um[3], up[3], u0[3], t[3], t2p1_m1_05, s[3], g_p_inv;
+    double um[3], up[3], u0[3], t[3], s[3], t2p1_m1_05, g_p_inv;
     int i;
 
     for(i=0;i<3;i++){
@@ -134,7 +134,7 @@ __kernel void push_p_boris(
       t[i] = dt_2 * B_p[i] * g_p_inv;
       }
 
-    t2p1_m1_05 = 2. / (1 + (t[0]*t[0] + t[1]*t[1] + t[2]*t[2])) ;
+    t2p1_m1_05 = 2. / (1. + t[0]*t[0] + t[1]*t[1] + t[2]*t[2]) ;
 
     for(i=0;i<3;i++){
       s[i] = t[i] * t2p1_m1_05;
@@ -182,9 +182,9 @@ __kernel void push_xyz(
     double dy = py[ip] * dt_g;
     double dz = pz[ip] * dt_g;
 
-    x[ip] += dx;
-    y[ip] += dy;
-    z[ip] += dz;
+    x[ip] = x[ip] + dx;
+    y[ip] = y[ip] + dy;
+    z[ip] = z[ip] + dz;
    }
 }
 
