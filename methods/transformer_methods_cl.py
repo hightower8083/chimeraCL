@@ -56,16 +56,119 @@ class TransformerMethodsCL(GenericMethodsCL):
             self._transform_backward(dht_arg, arg_in, arg_out,
                                      self.DataDev['phs_shft'])
 
-    def vec_field_poiss(self, fld):
+    def field_poiss_vec(self, fld):
         for m in range(0,self.Args['M']+1):
             for comp in self.Args['vec_comps']:
                 fld_arg = fld + comp + '_fb_m' + str(m)
                 self.mult_elementwise(self.DataDev['Poiss_m'+ str(m)],
                                       self.DataDev[fld_arg])
 
+    def field_poiss_scl(self, fld):
+        for m in range(0,self.Args['M']+1):
+            fld_arg = fld + '_fb_m' + str(m)
+            self.mult_elementwise(self.DataDev['Poiss_m'+ str(m)],
+                                  self.DataDev[fld_arg])
+
+
+    def field_grad(self, scl_in, vec_out):
+
+        self._get_mm1_scl(scl_in)
+
+        for m in range(0,self.Args['M']+1):
+            fld_x_m_out = vec_out + 'x' + '_fb_m' + str(m)
+            fld_y_m_out = vec_out + 'y' + '_fb_m' + str(m)
+            fld_z_m_out = vec_out + 'z' + '_fb_m' + str(m)
+
+            for fld in (fld_x_m_out, fld_y_m_out, fld_z_m_out):
+                self.set_to(self.DataDev[fld], 0.)
+
+            self.ab_dot_x(1.j, self.DataDev['kx'],
+                          self.DataDev[scl_in+'_fb_m'+str(m)],
+                          self.DataDev[fld_x_m_out])
+
+            # m-1 cmoponents
+            if m > 0:
+                fld_scl = scl_in + '_fb_m' + str(m-1)
+            else:
+                fld_scl = 'buff_fb_m-1_x'
+
+            self._cdot(self.DataDev['fld_buff0_c'],
+                       self.DataDev['dDHT_minus_m'+str(m)],
+                       self.DataDev[fld_scl] )
+
+            self.zpaxz(self.DataDev[fld_y_m_out],
+                       -1., self.DataDev['fld_buff0_c'])
+
+            self.zpaxz(self.DataDev[fld_z_m_out],
+                       -1.j, self.DataDev['fld_buff0_c'])
+
+            # m+1 cmoponents
+            if m < self.Args['M']:
+                fld_scl = scl_in + '_fb_m' + str(m+1)
+
+                self._cdot(self.DataDev['fld_buff0_c'],
+                           self.DataDev['dDHT_plus_m'+str(m)],
+                           self.DataDev[fld_scl] )
+
+                self.append_c2c(self.DataDev[fld_y_m_out],
+                                self.DataDev['fld_buff0_c'])
+
+                self.zpaxz(self.DataDev[fld_z_m_out],
+                           -1.j, self.DataDev['fld_buff0_c'])
+
+
+    def field_div(self, vec_in, scl_out):
+
+        for comp in ['y', 'z']:
+            self._get_mm1_scl(vec_in+comp, comp)
+
+        for m in range(0,self.Args['M']+1):
+            fld_m_out = scl_out + '_fb_m' + str(m)
+            self.set_to(self.DataDev[fld_m_out], 0.)
+
+            self.ab_dot_x(1.j, self.DataDev['kx'],
+                          self.DataDev[vec_in + 'x' +'_fb_m'+str(m)],
+                          self.DataDev[fld_m_out])
+
+            # m-1 cmoponents
+            if m > 0:
+                fld_y = vec_in + 'y' + '_fb_m' + str(m-1)
+                fld_z = vec_in + 'z' + '_fb_m' + str(m-1)
+            else:
+                fld_y = 'buff_fb_m-1_y'
+                fld_z = 'buff_fb_m-1_z'
+
+            self.axpbyz(-1.j, self.DataDev[fld_z],
+                        -1.0, self.DataDev[fld_y],
+                        self.DataDev['fld_buff0_c'])
+
+            self._cdot(self.DataDev['fld_buff1_c'],
+                       self.DataDev['dDHT_minus_m'+str(m)],
+                       self.DataDev['fld_buff0_c'] )
+
+            self.append_c2c(self.DataDev[fld_m_out],
+                            self.DataDev['fld_buff1_c'])
+
+            # m+1 cmoponents
+            if m < self.Args['M']:
+                fld_y = vec_in + 'y' + '_fb_m' + str(m+1)
+                fld_z = vec_in + 'z' + '_fb_m' + str(m+1)
+
+                self.axpbyz(-1.j, self.DataDev[fld_z],
+                            1.0, self.DataDev[fld_y],
+                            self.DataDev['fld_buff0_c'])
+
+                self._cdot(self.DataDev['fld_buff1_c'],
+                           self.DataDev['dDHT_plus_m'+str(m)],
+                           self.DataDev['fld_buff0_c'] )
+
+                self.append_c2c(self.DataDev[fld_m_out],
+                                self.DataDev['fld_buff1_c'])
+
+
     def field_rot(self, fld_in, fld_out):
 
-        self._get_mm1(fld_in)
+        self._get_mm1_vec(fld_in)
 
         for m in range(0,self.Args['M']+1):
             fld_x_m_out = fld_out + 'x' + '_fb_m' + str(m)
@@ -236,7 +339,7 @@ class TransformerMethodsCL(GenericMethodsCL):
             enqueue_barrier(self.queue)
             self.DataDev[arg_out_m][1:] = self.DataDev['fld_buff1_c']
 
-    def _get_mm1(self, fld):
+    def _get_mm1_vec(self, fld):
         if self.Args['M']==0:
             return
 
@@ -247,6 +350,19 @@ class TransformerMethodsCL(GenericMethodsCL):
 
             WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
             self._get_m1_knl(self.queue, (WGS_tot, ), (WGS, ),*args).wait()
+
+    def _get_mm1_scl(self, fld, comp='x'):
+        # Note: for scalar the X component of buffer will be used
+
+        if self.Args['M']==0:
+            return
+
+        arg_str = [fld + '_fb_m1', 'Nx', 'NxNrm1',]
+        args = [self.DataDev['buff_fb_m-1_' + comp].data,] \
+               + [self.DataDev[arg].data for arg in arg_str]
+
+        WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
+        self._get_m1_knl(self.queue, (WGS_tot, ), (WGS, ),*args).wait()
 
     def _prepare_dot(self):
         input_transform = self.dev_arr(dtype=np.double,
