@@ -28,6 +28,7 @@ class Frame():
                     store[arg] += x_shift
 
     def inject_plasma(self, species=[], grid=None, steps=None):
+
         if steps is None:
             steps = self.Args['Steps']
         x_shift = steps * self.Args['dt'] * self.Args['Velocity']

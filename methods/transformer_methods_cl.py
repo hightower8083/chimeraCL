@@ -165,7 +165,6 @@ class TransformerMethodsCL(GenericMethodsCL):
                 self.append_c2c(self.DataDev[fld_m_out],
                                 self.DataDev['fld_buff1_c'])
 
-
     def field_rot(self, fld_in, fld_out):
 
         self._get_mm1_vec(fld_in)

@@ -95,8 +95,7 @@ class GenericMethodsCL:
         arr_size = x.size
         WGS, WGS_tot = self.get_wgs(arr_size)
         self._mult_elementwise_knl(self.queue, (WGS_tot, ), (WGS, ),
-                                   x.data, z.data, np.uint32(arr_size)
-                                  ).wait()
+            x.data, z.data, np.uint32(arr_size) ).wait()
 
     def set_to(self, arr, val):
         if self.dev_type=='CPU' and arr.dtype == np.complex128:

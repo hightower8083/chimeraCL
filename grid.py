@@ -91,8 +91,6 @@ class Grid(GridMethodsCL):
                               / (2*np.pi*self.Args['dx']*self.Args['dr']\
                                  *self.Args['Rgrid'] )
 
-        self.Args['R_period'] = self.Args['Rmax'] + self.Args['dr']
-
         self.Args['NxNr'] = self.Args['Nr'] * self.Args['Nx']
         self.Args['Nxm1Nrm1'] = (self.Args['Nr']-1) * (self.Args['Nx']-1)
         self.Args['NxNrm1'] = (self.Args['Nr']-1) * self.Args['Nx']

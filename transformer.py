@@ -44,9 +44,11 @@ class Transformer(TransformerMethodsCL):
         self.Args['kx'] = self.Args['kx0'] + self.Args['kx_env']
         self.Args['dkx'] = (self.Args['kx'][1]-self.Args['kx'][0]) / (2*np.pi)
 
+        R_period = self.Args['Rgrid'][-1] + 0.5*self.Args['dr']
         for m in range(self.Args['M']+2):
-            self.Args['kr_m'+str(m)] = jn_zeros(m, self.Args['Nr']-1) / \
-                                                   self.Args['R_period']
+            self.Args['kr_m'+str(m)] = \
+                jn_zeros(m, self.Args['Nr']-1) / R_period
+
         for m in range(self.Args['M']+1):
             self.Args['w_m'+str(m)] = np.sqrt(
                 self.Args['kx'][None,:]**2
@@ -59,26 +61,28 @@ class Transformer(TransformerMethodsCL):
         Hankel transforms and differential operations in the
         spectral space
         """
+
         Rgrid = self.Args['Rgrid'][1:,None]
+        R_period = Rgrid[-1] + 0.5*self.Args['dr']
 
         for m in range(self.Args['M']+1):
             # make spectral axes for the more m and satellite mode m+1 and m-1
-            kr_0 = jn_zeros(m, self.Args['Nr']-1) / self.Args['R_period']
-            kr_p = jn_zeros(m+1, self.Args['Nr']-1) / self.Args['R_period']
-            kr_m = jn_zeros(m-1, self.Args['Nr']-1) / self.Args['R_period']
+            kr_0 = jn_zeros(m,   self.Args['Nr']-1) / R_period
+            kr_p = jn_zeros(m+1, self.Args['Nr']-1) / R_period
+            kr_m = jn_zeros(m-1, self.Args['Nr']-1) / R_period
 
             # make the backward Hankel transform
             self.Args['DHT_inv_m'+str(m)] = jn(m, Rgrid * kr_0)
 
             # make the forward Hankel transform by inversing the backward one
-            self.Args['DHT_m'+str(m)] = np.linalg.inv(
+            self.Args['DHT_m'+str(m)] = np.linalg.pinv(
                 self.Args['DHT_inv_m'+str(m)])
 
             # make spectral differential operator matrices
             self.Args['dDHT_plus_m'+str(m)] = self.Args['DHT_m'+str(m)].dot(
-                0.5 * kr_p * jn(m, Rgrid*kr_p))
+                0.5 * kr_p * jn(m, Rgrid * kr_p))
             self.Args['dDHT_minus_m'+str(m)] = self.Args['DHT_m'+str(m)].dot(
-                0.5 * kr_m * jn(m, Rgrid*kr_m))
+                0.5 * kr_m * jn(m, Rgrid * kr_m))
 
     def _init_transformer_data_on_dev(self):
         # list the names of all scalar and vector fields components
