@@ -69,6 +69,13 @@ class TransformerMethodsCL(GenericMethodsCL):
             self.mult_elementwise(self.DataDev['Poiss_m'+ str(m)],
                                   self.DataDev[fld_arg])
 
+    def fields_smooth(self, flds):
+        for m in range(0,self.Args['M']+1):
+            for fld in flds:
+                fld_arg = fld + '_fb_m' + str(m)
+                self.mult_elementwise(
+                    self.DataDev['SmoothingFilter_m'+ str(m)],
+                    self.DataDev[fld_arg])
 
     def field_grad(self, scl_in, vec_out):
 

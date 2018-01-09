@@ -33,27 +33,32 @@ class Transformer(TransformerMethodsCL):
         """
         Prepare the grids in the Fourier and Bessel spectral space
         """
-        if 'KxShift' in self.Args:
-            self.Args['kx0'] = 2*np.pi*self.Args['KxShift']
-        else:
-            self.Args['kx0'] = 0.0
 
-        self.Args['kx_env'] = 2*np.pi*np.fft.fftfreq(self.Args['Nx'],
-                                                     self.Args['dx'])
+        dx = self.Args['dx']
+        Nx = self.Args['Nx']
+        dr = self.Args['dr']
+        Nr = self.Args['Nr']
 
-        self.Args['kx'] = self.Args['kx0'] + self.Args['kx_env']
-        self.Args['dkx'] = (self.Args['kx'][1]-self.Args['kx'][0]) / (2*np.pi)
+        kx = 2*np.pi*np.fft.fftfreq(Nx, dx)
 
-        R_period = self.Args['Rgrid'][-1] + 0.5*self.Args['dr']
+        R_period = self.Args['Rgrid'][-1] + 0.5*dr
+
+        self.Args['kx'] = kx
+
         for m in range(self.Args['M']+2):
-            self.Args['kr_m'+str(m)] = \
-                jn_zeros(m, self.Args['Nr']-1) / R_period
+            self.Args['kr_m'+str(m)] = jn_zeros(m, Nr-1) / R_period
 
         for m in range(self.Args['M']+1):
-            self.Args['w_m'+str(m)] = np.sqrt(
-                self.Args['kx'][None,:]**2
-                + self.Args['kr_m'+str(m)][:,None]**2)
+            kr = self.Args['kr_m'+str(m)]
+            self.Args['w_m'+str(m)] = np.sqrt(kx[None,:]**2 + kr[:,None]**2)
+
             self.Args['Poiss_m'+str(m)] = 1./self.Args['w_m'+str(m)]**2
+
+        for m in range(self.Args['M']+1):
+            kr = self.Args['kr_m'+str(m)]
+            self.Args['SmoothingFilter_m'+str(m)] = \
+                (1 - np.sin(0.5*np.pi*kx[None,:]/kx.max())**4) \
+              * (1 - np.sin(0.5*np.pi*kr[:,None]/kr.max())**4)
 
     def _make_DHT(self):
         """
