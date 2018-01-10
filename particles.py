@@ -16,6 +16,8 @@ class Particles(ParticleMethodsCL):
 
         self.send_args_to_dev()
 
+        self._init_grid_data_on_dev()
+
     def sort_parts(self, grid):
         if self.Args['Np'] == 0:
             return
@@ -49,29 +51,31 @@ class Particles(ParticleMethodsCL):
             self.Args['charge'] = -1.
 
         if 'mass' not in self.Args:
-            self.Args['mass'] = -1.
+            self.Args['mass'] = 1.
 
         if 'dens' not in self.Args:
             self.Args['dens'] = 1.
 
+        dt, q_s, m_s, n_s, dx, dr = [self.Args[arg] for arg in ['dt',
+            'charge', 'mass', 'dens', 'dx', 'dr']]
+
+        self.Args['dt_2'] = 0.5 * dt
+
         if 'Nppc' in self.Args:
             self.Args['Nppc'] = np.array(self.Args['Nppc'],dtype=np.uint32)
-
-            self.Args['w0'] = 2 * np.pi * self.Args['dx'] * self.Args['dr'] \
-                              * self.Args['charge'] * self.Args['dens'] \
-                              / np.prod(self.Args['Nppc'])
-            self.Args['ddx'] = self.Args['dx']/self.Args['Nppc'][0]
+            Num_ppc = np.prod(self.Args['Nppc'])
+            self.Args['w0'] = 2 * np.pi * dx * dr * q_s * n_s / Num_ppc
+            self.Args['ddx'] = dx / self.Args['Nppc'][0]
         else:
-            self.Args['ddx'] = 1
+            self.Args['ddx'] = 1.
+
+        self.Args['FactorPush'] = 2 * np.pi * dt * q_s / m_s
 
         self.Args['right_lim'] = 0.0
 
-        self.Args['2pidt'] = 2 * np.pi * self.Args['dt']
-        self.Args['dt_2'] = 0.5*self.Args['dt']
-        # self.Args['dt_inv'] = 1./self.Args['dt']
+    def _init_grid_data_on_dev(self):
 
         args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w','g_inv']
-
         for arg in args_strs:
             for tmp_type in ('', '_new'):
                 self.DataDev[arg + tmp_type + '_mp'] = \
