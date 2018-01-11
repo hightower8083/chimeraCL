@@ -43,7 +43,10 @@ class Frame():
             inject_domain['Rmin'] = grid.Args['Rmin'] * (grid.Args['Rmin']>0)
             inject_domain['Rmax'] = grid.Args['Rmax']
 
-            specie.add_particles(domain_in=inject_domain)
+            specie.make_new_domain(inject_domain)
+            specie.add_new_particles()
+
+#            specie.add_particles(domain_in=inject_domain)
             specie.sort_parts(grid=grid)
             specie.align_parts()
             specie.Args['right_lim'] = specie.DataDev['x'][-1].get() \

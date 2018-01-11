@@ -23,13 +23,26 @@ class Solver(Grid, Transformer, SolverMethodsCL):
         self._init_grid_data_on_dev()
         self.init_transformer()
 
-        self.send_args_to_dev()
         self._make_ms_coefficients()
+        self.send_args_to_dev()
 
     def push_fields(self):
         self.advance_fields(vecs=['E', 'G', 'J', 'dN0', 'dN1'])
 
     def _make_ms_coefficients(self):
+        for m in range(self.Args['M']+1):
+            w = self.Args['w_m'+str(m)]
+            dt = self.Args['dt']
+
+            self.Args['MxSlv_cos(wdt)_m'+str(m)] = np.cos(w * dt)
+            self.Args['MxSlv_sin(wdt)*w_m'+str(m)] = np.sin(w*dt) * w
+            self.Args['MxSlv_1/w**2_m'+str(m)] = 1. / w**2
+
+            self.Args['dont_keep'].append('MxSlv_cos(wdt)_m'+str(m))
+            self.Args['dont_keep'].append('MxSlv_sin(wdt)*w_m'+str(m))
+            self.Args['dont_keep'].append('MxSlv_1/w**2_m'+str(m))
+
+    def _make_ms_coefficients_old(self):
         for m in range(self.Args['M']+1):
             mstr = '_m'+str(m)
             w = self.Args['w_m'+str(m)]

@@ -8,6 +8,7 @@ class Particles(ParticleMethodsCL):
     def __init__(self, configs_in, comm=None):
         if comm is not None:
             self.import_comm(comm)
+
         self.set_global_working_group_size()
 
         self.DataDev = {}
@@ -20,11 +21,15 @@ class Particles(ParticleMethodsCL):
 
     def sort_parts(self, grid):
         if self.Args['Np'] == 0:
+            self.flag_sorted = True
             return
 
-        self.index_sort(grid)
+        if self.flag_sorted == False:
+            self.index_sort(grid)
+            self.flag_sorted = True
 
     def add_particles(self, domain_in=None, beam_in=None):
+        # To be removed
         if domain_in is not None:
             self.make_new_domain(domain_in)
         elif beam_in is not None:
@@ -72,6 +77,11 @@ class Particles(ParticleMethodsCL):
         self.Args['FactorPush'] = 2 * np.pi * dt * q_s / m_s
 
         self.Args['right_lim'] = 0.0
+
+        self.flag_sorted = False
+
+        self.Args['dont_send'] = []
+        self.Args['dont_keep'] = []
 
     def _init_grid_data_on_dev(self):
 

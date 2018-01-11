@@ -6,6 +6,7 @@ class Grid(GridMethodsCL):
     def __init__(self, configs_in, comm):
         if comm is not None:
             self.import_comm(comm)
+
         self.set_global_working_group_size()
 
         self._process_configs(configs_in)
@@ -16,8 +17,8 @@ class Grid(GridMethodsCL):
         self.init_grid_methods()
 
         self.DataDev = {}
-        self.send_args_to_dev()
         self._init_grid_data_on_dev()
+        self.send_args_to_dev()
 
     def depose_charge(self, species=[]):
         for m in range(self.Args['M']+1):
@@ -95,6 +96,10 @@ class Grid(GridMethodsCL):
         self.Args['Nxm1Nrm1'] = (self.Args['Nr']-1) * (self.Args['Nx']-1)
         self.Args['NxNrm1'] = (self.Args['Nr']-1) * self.Args['Nx']
         self.Args['NxNr_4'] = self.Args['Nr']//2 * self.Args['Nx']//2
+
+        self.Args['dont_send'] = []
+        self.Args['dont_keep'] = []
+
 
     def _init_grid_data_on_dev(self):
 

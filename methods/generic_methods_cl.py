@@ -54,8 +54,13 @@ class GenericMethodsCL:
             return WGS, WGS_tot
 
     def send_args_to_dev(self):
-        for arg in self.Args.keys():
+        original_keys = list(self.Args.keys())
+        for arg in original_keys:
             arg_type = type(self.Args[arg])
+            if 'dont_send' in self.Args.keys():
+                if arg in self.Args['dont_send']:
+                    continue
+
             if arg_type is int:
                 arg_dtype = np.uint32
             elif arg_type is float:
@@ -64,7 +69,11 @@ class GenericMethodsCL:
                 arg_dtype = self.Args[arg].dtype
             else:
                 continue
+
             self.DataDev[arg] = self.dev_arr(self.Args[arg],dtype=arg_dtype)
+            if 'dont_keep' in self.Args.keys():
+                if arg in self.Args['dont_keep']:
+                    self.Args.pop(arg);
 
     def dev_arr(self, val=None, shape=(1, ), dtype=np.double, allocator=None):
         if type(val) is np.ndarray:

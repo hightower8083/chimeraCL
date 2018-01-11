@@ -60,6 +60,12 @@ class Transformer(TransformerMethodsCL):
                 (1 - np.sin(0.5*np.pi*kx[None,:]/kx.max())**4) \
               * (1 - np.sin(0.5*np.pi*kr[:,None]/kr.max())**4)
 
+        for m in range(self.Args['M']+2):
+            self.Args['dont_send'].append('kr_m'+str(m))
+            self.Args['dont_send'].append('w_m'+str(m))
+            self.Args['dont_keep'].append('Poiss_m'+str(m))
+            self.Args['dont_keep'].append('SmoothingFilter_m'+str(m))
+
     def _make_DHT(self):
         """
         Prepare the matricies for the forward and backward
@@ -88,6 +94,12 @@ class Transformer(TransformerMethodsCL):
                 0.5 * kr_p * jn(m, Rgrid * kr_p))
             self.Args['dDHT_minus_m'+str(m)] = self.Args['DHT_m'+str(m)].dot(
                 0.5 * kr_m * jn(m, Rgrid * kr_m))
+
+            self.Args['dont_keep'].append('DHT_inv_m'+str(m))
+            self.Args['dont_keep'].append('DHT_m'+str(m))
+            self.Args['dont_keep'].append('dDHT_plus_m'+str(m))
+            self.Args['dont_keep'].append('dDHT_minus_m'+str(m))
+
 
     def _init_transformer_data_on_dev(self):
         # list the names of all scalar and vector fields components

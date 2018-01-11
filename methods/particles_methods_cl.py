@@ -58,6 +58,7 @@ class ParticleMethodsCL(GenericMethodsCL):
 
         self.reset_num_parts()
         self.realloc_field_arrays()
+        self.flag_sorted = False
 
     def realloc_field_arrays(self):
         flds_comps_str = []
@@ -167,6 +168,9 @@ class ParticleMethodsCL(GenericMethodsCL):
         if self.Args['Np']==0:
             return
 
+        if int(self.Args['Immobile'])==1:
+            return
+
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
         if mode=='half':
@@ -177,9 +181,13 @@ class ParticleMethodsCL(GenericMethodsCL):
         args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv', which_dt, 'Np']
         args = [self.DataDev[arg].data for arg in args_strs]
         self._push_xyz_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
+        self.flag_sorted = False
 
     def push_veloc(self):
         if self.Args['Np'] == 0:
+            return
+
+        if int(self.Args['Immobile'])==1:
             return
 
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
