@@ -42,19 +42,24 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._push_p_boris_knl = prg.push_p_boris
         self._fill_grid_knl = prg.fill_grid
 
-    def add_new_particles(self):
+    def add_new_particles(self, source=None):
         args_strs = ['x', 'y', 'z', 'px', 'py', 'pz', 'w', 'g_inv']
+
+        if source is None:
+            DataSrc = self.DataDev
+        else:
+            DataSrc = source.DataDev
+
         old_Np = self.DataDev['x'].size
-        new_Np = self.DataDev['x_new'].size
+        new_Np = DataSrc['x_new'].size
         full_Np = old_Np + new_Np
         for arg in args_strs:
             buff = self.dev_arr(dtype=self.DataDev[arg].dtype,
                                 shape=full_Np,
                                 allocator=self.DataDev[arg + '_mp'])
             buff[:old_Np] = self.DataDev[arg]
-            buff[old_Np:] = self.DataDev[arg+'_new']
+            buff[old_Np:] = DataSrc[arg+'_new']
             self.DataDev[arg] = buff
-            self.DataDev[arg+'_new'] = None
 
         self.reset_num_parts()
         self.realloc_field_arrays()
@@ -168,7 +173,7 @@ class ParticleMethodsCL(GenericMethodsCL):
         if self.Args['Np']==0:
             return
 
-        if int(self.Args['Immobile'])==1:
+        if 'Immobile' in self.Args.keys():
             return
 
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
@@ -187,7 +192,7 @@ class ParticleMethodsCL(GenericMethodsCL):
         if self.Args['Np'] == 0:
             return
 
-        if int(self.Args['Immobile'])==1:
+        if 'Immobile' in self.Args.keys():
             return
 
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])

@@ -93,6 +93,17 @@ class GenericMethodsCL:
                                  arr_in.data, arr_out.data,
                                  np.uint32(arr_size)).wait()
 
+    def set_to(self, arr, val):
+        if self.dev_type=='CPU' and arr.dtype == np.complex128:
+            # just a workaround the stupid Apple CL implementation for CPU..
+            arr_size = arr.size
+            WGS, WGS_tot = self.get_wgs(arr_size)
+            self._set_cdouble_to_knl(self.queue, (WGS_tot, ), (WGS, ),
+                                     arr.data, np.complex128(val),
+                                     np.uint32(arr_size)).wait()
+        else:
+            arr.fill(val)
+
     def append_c2c(self, arr_base, arr_add):
         arr_size = arr_base.size
         WGS, WGS_tot = self.get_wgs(arr_size)
@@ -105,17 +116,6 @@ class GenericMethodsCL:
         WGS, WGS_tot = self.get_wgs(arr_size)
         self._mult_elementwise_knl(self.queue, (WGS_tot, ), (WGS, ),
             x.data, z.data, np.uint32(arr_size) ).wait()
-
-    def set_to(self, arr, val):
-        if self.dev_type=='CPU' and arr.dtype == np.complex128:
-            # just a workaround the stupid Apple CL implementation for CPU..
-            arr_size = arr.size
-            WGS, WGS_tot = self.get_wgs(arr_size)
-            self._set_cdouble_to_knl(self.queue, (WGS_tot, ), (WGS, ),
-                                     arr.data, np.complex128(val),
-                                     np.uint32(arr_size)).wait()
-        else:
-            arr.fill(val)
 
     def axpbyz(self, a, x, b, y, z):
         arr_size = x.size

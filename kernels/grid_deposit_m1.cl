@@ -25,6 +25,7 @@ __kernel void depose_scalar(
   __global double *z,
   __global double *w,
   __global uint *indx_offset,
+             char charge,
   __constant uint *Nx,
   __constant double *xmin,
   __constant double *dx_inv,
@@ -107,7 +108,7 @@ if (ip_start != ip_end){
       xp = x[ip_srtd];
       yp = y[ip_srtd];
       zp = z[ip_srtd];
-      wp = w[ip_srtd];
+      wp = w[ip_srtd]*charge;
 
       rp = sqrt(yp*yp + zp*zp);
 
@@ -179,6 +180,7 @@ __kernel void depose_vector(
   __global double *g_inv,
   __global double *w,
   __global uint *indx_offset,
+           char charge,
   __constant uint *Nx,
   __constant double *xmin,
   __constant double *dx_inv,
@@ -271,7 +273,7 @@ if (ip_start != ip_end){
       jp[0] = ux[ip_srtd];
       jp[1] = uy[ip_srtd];
       jp[2] = uz[ip_srtd];
-      wp = w[ip_srtd]*g_inv[ip_srtd];
+      wp = w[ip_srtd] * g_inv[ip_srtd] * charge;
 
       rp = sqrt(yp*yp + zp*zp);
 

@@ -44,9 +44,12 @@ class Frame():
             inject_domain['Rmax'] = grid.Args['Rmax']
 
             specie.make_new_domain(inject_domain)
-            specie.add_new_particles()
 
-#            specie.add_particles(domain_in=inject_domain)
+            if 'InjectorSource' in specie.Args.keys():
+                specie.add_new_particles(specie.Args['InjectorSource'])
+            else:
+                specie.add_new_particles()
+
             specie.sort_parts(grid=grid)
             specie.align_parts()
             specie.Args['right_lim'] = specie.DataDev['x'][-1].get() \

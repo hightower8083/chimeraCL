@@ -25,7 +25,8 @@ class Grid(GridMethodsCL):
             self.set_to(self.DataDev['rho_m'+str(m)], 0)
 
         for parts in species:
-            self.depose_scalar(parts, 'w', 'rho')
+            self.depose_scalar(parts, 'w', 'rho',
+                               charge=parts.Args['charge'])
 
         self.postproc_depose_scalar('rho')
 
@@ -44,8 +45,11 @@ class Grid(GridMethodsCL):
             self.set_to(self.DataDev[arg], 0)
 
         for parts in species:
+            if 'Immobile' in parts.Args.keys():
+                continue
             self.depose_vector(parts, momentum_args_str,
-                               ['g_inv', 'w'], 'J')
+                               ['g_inv', 'w'], 'J',
+                               charge=parts.Args['charge'])
 
         self.postproc_depose_vector('J')
 
@@ -54,6 +58,10 @@ class Grid(GridMethodsCL):
         flds_str = ['E', 'B']
 
         for parts in species:
+
+            if 'Immobile' in parts.Args.keys():
+                continue
+
             flds_comps_str = []
             for fld_str in flds_str:
                 for comp_str in self.Args['vec_comps']:

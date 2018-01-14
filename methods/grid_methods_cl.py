@@ -40,26 +40,27 @@ class GridMethodsCL(GenericMethodsCL):
         if 'vec_comps' not in self.Args:
             self.Args['vec_comps'] = self.Args['default_vec_comps']
 
-    def depose_scalar(self, parts, sclr, fld):
+    def depose_scalar(self, parts, src_scalar, dest_fld, charge):
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr_4'])
 
         if parts.Args['Np'] <= 0:
             return
 
         part_str = ['sort_indx',] + self.Args['vec_comps'] + \
-                    [sclr, 'cell_offset',]
+                    [src_scalar, 'cell_offset',]
 
         grid_str = ['Nx', 'Xmin', 'dx_inv',
-                     'Nr', 'Rmin', 'dr_inv',
-                     'NxNr_4']
+                    'Nr', 'Rmin', 'dr_inv',
+                    'NxNr_4']
 
-        fld_str = [fld+'_m'+str(m) for m in range(self.Args['M']+1)]
+        dest_fld += '_m'
+        fld_str = [dest_fld + str(m) for m in range(self.Args['M']+1)]
 
         args_part = [parts.DataDev[arg].data for arg in part_str]
         args_grid = [self.DataDev[arg].data for arg in grid_str]
         args_fld = [self.DataDev[arg].data for arg in fld_str]
 
-        args = args_part + args_grid + args_fld
+        args = args_part + [np.int8(charge),] + args_grid + args_fld
 
         evnt = enqueue_marker(self.queue)
         for i_off in np.arange(4).astype(np.uint32):
@@ -68,14 +69,14 @@ class GridMethodsCL(GenericMethodsCL):
                                            i_off, *args,
                                            wait_for = [evnt,])
 
-    def depose_vector(self, parts, vec, factors, vec_fld):
+    def depose_vector(self, parts, vec, factors, vec_fld, charge):
 
         part_str =  ['sort_indx',] + self.Args['vec_comps'] + vec + factors + \
                      ['cell_offset',]
 
         grid_str = ['Nx', 'Xmin', 'dx_inv',
-                     'Nr', 'Rmin', 'dr_inv',
-                     'NxNr_4']
+                    'Nr', 'Rmin', 'dr_inv',
+                    'NxNr_4']
 
         fld_str = []
         for m in range(self.Args['M']+1):
@@ -86,7 +87,7 @@ class GridMethodsCL(GenericMethodsCL):
         args_grid = [self.DataDev[arg].data for arg in grid_str]
         args_fld = [self.DataDev[arg].data for arg in fld_str]
 
-        args_dep = args_part + args_grid + args_fld
+        args_dep = args_part + [np.int8(charge),] + args_grid + args_fld
 
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr_4'])
         evnt = enqueue_marker(self.queue)
@@ -159,8 +160,8 @@ class GridMethodsCL(GenericMethodsCL):
         part_str = ['sort_indx',sclr] + self.Args['vec_comps'] + ['cell_offset',]
 
         grid_str = ['Nx', 'Xmin', 'dx_inv',
-                     'Nr', 'Rmin', 'dr_inv',
-                     'Nxm1Nrm1']
+                    'Nr', 'Rmin', 'dr_inv',
+                    'Nxm1Nrm1']
 
         fld_str = [fld+'_m'+str(m) for m in range(self.Args['M']+1)]
 

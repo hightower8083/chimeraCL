@@ -22,7 +22,6 @@ class Particles(ParticleMethodsCL):
     def sort_parts(self, grid):
         if self.Args['Np'] == 0:
             self.flag_sorted = True
-            return
 
         if self.flag_sorted == False:
             self.index_sort(grid)
@@ -69,7 +68,7 @@ class Particles(ParticleMethodsCL):
         if 'Nppc' in self.Args:
             self.Args['Nppc'] = np.array(self.Args['Nppc'],dtype=np.uint32)
             Num_ppc = np.prod(self.Args['Nppc'])
-            self.Args['w0'] = 2 * np.pi * dx * dr * q_s * n_s / Num_ppc
+            self.Args['w0'] = 2 * np.pi * dx * dr * n_s / Num_ppc
             self.Args['ddx'] = dx / self.Args['Nppc'][0]
         else:
             self.Args['ddx'] = 1.
@@ -80,7 +79,7 @@ class Particles(ParticleMethodsCL):
 
         self.flag_sorted = False
 
-        self.Args['dont_send'] = []
+        self.Args['dont_send'] = ['InjectorSource','charge','mass', 'dens','Immobile']
         self.Args['dont_keep'] = []
 
     def _init_grid_data_on_dev(self):

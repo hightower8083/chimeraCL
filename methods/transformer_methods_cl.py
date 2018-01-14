@@ -96,8 +96,10 @@ class TransformerMethodsCL(GenericMethodsCL):
             # m-1 cmoponents
             if m > 0:
                 fld_scl = scl_in + '_fb_m' + str(m-1)
-            else:
+            elif self.Args['M'] > 0:
                 fld_scl = 'buff_fb_m-1_x'
+            else:
+                continue
 
             self._cdot(self.DataDev['fld_buff0_c'],
                        self.DataDev['dDHT_minus_m'+str(m)],
@@ -141,9 +143,11 @@ class TransformerMethodsCL(GenericMethodsCL):
             if m > 0:
                 fld_y = vec_in + 'y' + '_fb_m' + str(m-1)
                 fld_z = vec_in + 'z' + '_fb_m' + str(m-1)
-            else:
+            elif self.Args['M'] > 0:
                 fld_y = 'buff_fb_m-1_y'
                 fld_z = 'buff_fb_m-1_z'
+            else:
+                continue
 
             self.axpbyz(-1.j, self.DataDev[fld_z],
                         -1.0, self.DataDev[fld_y],
@@ -197,10 +201,12 @@ class TransformerMethodsCL(GenericMethodsCL):
                 fld_x = fld_in + 'x' + '_fb_m' + str(m-1)
                 fld_y = fld_in + 'y' + '_fb_m' + str(m-1)
                 fld_z = fld_in + 'z' + '_fb_m' + str(m-1)
-            else:
+            elif self.Args['M'] > 0:
                 fld_x = 'buff_fb_m-1_x'
                 fld_y = 'buff_fb_m-1_y'
                 fld_z = 'buff_fb_m-1_z'
+            else:
+                continue
 
             self.axpbyz(-1, self.DataDev[fld_z],
                         1.j, self.DataDev[fld_y],
@@ -249,6 +255,31 @@ class TransformerMethodsCL(GenericMethodsCL):
 
                 self.zpaxz(self.DataDev[fld_z_m_out],
                            -1, self.DataDev['fld_buff0_c'])
+
+    def _get_mm1_vec(self, fld):
+        if self.Args['M']==0:
+            return
+
+        for comp in self.Args['vec_comps']:
+            arg_str = [fld + comp + '_fb_m1', 'Nx', 'NxNrm1',]
+            args = [self.DataDev['buff_fb_m-1_' + comp].data,] \
+                   + [self.DataDev[arg].data for arg in arg_str]
+
+            WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
+            self._get_m1_knl(self.queue, (WGS_tot, ), (WGS, ),*args).wait()
+
+    def _get_mm1_scl(self, fld, comp='x'):
+        # Note: for scalar the X component of buffer will be used
+
+        if self.Args['M']==0:
+            return
+
+        arg_str = [fld + '_fb_m1', 'Nx', 'NxNrm1',]
+        args = [self.DataDev['buff_fb_m-1_' + comp].data,] \
+               + [self.DataDev[arg].data for arg in arg_str]
+
+        WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
+        self._get_m1_knl(self.queue, (WGS_tot, ), (WGS, ),*args).wait()
 
     def _transform_forward(self, dht_arg, arg_in, arg_out, phs_shft):
         dir = 0
@@ -344,31 +375,6 @@ class TransformerMethodsCL(GenericMethodsCL):
                        self.DataDev['fld_buff0_c'])
             enqueue_barrier(self.queue)
             self.DataDev[arg_out_m][1:] = self.DataDev['fld_buff1_c']
-
-    def _get_mm1_vec(self, fld):
-        if self.Args['M']==0:
-            return
-
-        for comp in self.Args['vec_comps']:
-            arg_str = [fld + comp + '_fb_m1', 'Nx', 'NxNrm1',]
-            args = [self.DataDev['buff_fb_m-1_' + comp].data,] \
-                   + [self.DataDev[arg].data for arg in arg_str]
-
-            WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
-            self._get_m1_knl(self.queue, (WGS_tot, ), (WGS, ),*args).wait()
-
-    def _get_mm1_scl(self, fld, comp='x'):
-        # Note: for scalar the X component of buffer will be used
-
-        if self.Args['M']==0:
-            return
-
-        arg_str = [fld + '_fb_m1', 'Nx', 'NxNrm1',]
-        args = [self.DataDev['buff_fb_m-1_' + comp].data,] \
-               + [self.DataDev[arg].data for arg in arg_str]
-
-        WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
-        self._get_m1_knl(self.queue, (WGS_tot, ), (WGS, ),*args).wait()
 
     def _prepare_dot(self):
         input_transform = self.dev_arr(dtype=np.double,

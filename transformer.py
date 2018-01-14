@@ -119,11 +119,11 @@ class Transformer(TransformerMethodsCL):
 
         # allocate the buffer for the mode m=-1
         for comp in self.Args['vec_comps']:
-            self.DataDev['buff_fb_m-1_' + comp] = self.dev_arr(
+            self.DataDev['buff_fb_m-1_' + comp] = self.dev_arr(val=0,
                 dtype=np.complex128, shape=(self.Args['Nr']-1, self.Args['Nx']))
 
         # allocate the buffer to keep phase shift data exp(i*kx*x0)
-        self.DataDev['phs_shft'] = self.dev_arr(dtype=np.complex128,
+        self.DataDev['phs_shft'] = self.dev_arr(dtype=np.complex128,val=0,
                                                 shape=self.Args['Nx'])
 
         # allocate the auxilary field buffers
@@ -131,6 +131,6 @@ class Transformer(TransformerMethodsCL):
         for buff_i in range(2):
             for buff_dtype in buff_dtypes.keys():
                 arg_str = '_'.join(('fld', 'buff'+str(buff_i), buff_dtype))
-                self.DataDev[arg_str] = self.dev_arr(
+                self.DataDev[arg_str] = self.dev_arr(val=0,
                     shape=(self.Args['Nr']-1, self.Args['Nx']),
                     dtype=buff_dtypes[buff_dtype] )
