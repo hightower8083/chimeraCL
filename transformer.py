@@ -25,10 +25,6 @@ class Transformer(TransformerMethodsCL):
             for comp in self.Args['vec_comps']:
                 self.transform_field(vect+comp, dir=dir)
 
-    def restore_B_fb(self):
-        self.field_rot('G', 'B')
-        self.field_poiss_vec('B')
-
     def _make_spectral_axes(self):
         """
         Prepare the grids in the Fourier and Bessel spectral space

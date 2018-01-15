@@ -29,6 +29,10 @@ class Solver(Grid, Transformer, SolverMethodsCL):
     def push_fields(self):
         self.advance_fields(vecs=['E', 'G', 'J', 'dN0', 'dN1'])
 
+    def restore_B_fb(self):
+        self.field_rot('G', 'B')
+        self.field_poiss_vec('B')
+
     def _make_ms_coefficients(self):
         for m in range(self.Args['M']+1):
             w = self.Args['w_m'+str(m)]

@@ -1,5 +1,59 @@
 // this is a source of maxwell solver kernels for chimeraCL project
 
+//  Kernel to multiply the left and right egdes
+//  of the grid by some (damping) profile. Complex valued
+__kernel void profile_edges_c(
+  __global double2 *x,
+  __global double *f,
+           uint NxNr,
+           uint Nx,
+           uint Nf)
+{
+  uint i_cell = (uint) get_global_id(0);
+  if (i_cell < NxNr)
+   {
+    uint ir = i_cell/Nx;
+    uint ix = i_cell - ir*Nx;
+    if (ix < Nf)
+      {
+        x[i_cell].s0 *= f[ix];
+        x[i_cell].s1 *= f[ix];
+      }
+
+    if (ix > Nx-Nf)
+      {
+        x[i_cell].s0 *= f[Nx-ix];
+        x[i_cell].s1 *= f[Nx-ix];
+      }
+   }
+}
+
+//  Kernel to multiply the left and right egdes
+//  of the grid by some (damping) profile. Real valued
+__kernel void profile_edges_d(
+  __global double *x,
+  __global double *f,
+           uint NxNr,
+           uint Nx,
+           uint Nf)
+{
+  uint i_cell = (uint) get_global_id(0);
+  if (i_cell < NxNr)
+   {
+    uint ir = i_cell/Nx;
+    uint ix = i_cell - ir*Nx;
+    if (ix < Nf)
+      {
+        x[i_cell] *= f[ix];
+      }
+
+    if (ix > Nx-Nf)
+      {
+        x[i_cell] *= f[Nx-ix];
+      }
+   }
+}
+
 __kernel void advance_e_g_m(
   __constant uint *NxNr,
   __constant double *dt_inv,
