@@ -63,19 +63,23 @@ class SolverMethodsCL(GenericMethodsCL):
             self._advance_e_g_m_knl(self.queue, (WGS_tot, ), (WGS, ),*args)
         enqueue_barrier(self.queue)
 
-    def profile_edges(self, fld):
+    def profile_edges(self, flds):
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr'])
 
-        if self.DataDev[fld].dtype==np.double:
-            profiler = self._profile_edges_d_knl
-        elif self.DataDev[fld].dtype==np.complex128:
-            profiler = self._profile_edges_c_knl
+        for fld in flds:
+            for comp in self.Args['vec_comps']:
+                for m in range(self.Args['M']+1):
+                    fld_str = fld + comp + '_m' + str(m)
 
+                    if self.DataDev[fld_str].dtype==np.double:
+                        profiler = self._profile_edges_d_knl
+                    elif self.DataDev[fld_str].dtype==np.complex128:
+                        profiler = self._profile_edges_c_knl
 
-        profiler(self.queue, (WGS_tot, ), (WGS, ),
-                 self.DataDev[fld].data,
-                 self.DataDev['DampProfile'].data,
-                 np.uint32(self.Args['NxNr']),
-                 np.uint32(self.Args['Nx']),
-                 np.uint32(2*self.Args['DampCells'])
-                ).wait()
+                    profiler(self.queue, (WGS_tot, ), (WGS, ),
+                             self.DataDev[fld_str].data,
+                             self.DataDev['DampProfile'].data,
+                             np.uint32(self.Args['NxNr']),
+                             np.uint32(self.Args['Nx']),
+                             np.uint32(2*self.Args['DampCells'])
+                            ).wait()

@@ -29,6 +29,11 @@ class Solver(Grid, Transformer, SolverMethodsCL):
     def push_fields(self):
         self.advance_fields(vecs=['E', 'G', 'J', 'dN0', 'dN1'])
 
+    def damp_fields(self):
+        self.fb_transform(vects=['E', 'G'], dir=1, mode='half')
+        self.profile_edges(['E', 'G'])
+        self.fb_transform(vects=['E', 'G'], dir=0, mode='half')
+
     def restore_B_fb(self):
         self.field_rot('G', 'B')
         self.field_poiss_vec('B')

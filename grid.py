@@ -111,14 +111,15 @@ class Grid(GridMethodsCL):
 
     def _init_grid_data_on_dev(self):
 
-        flds_str = ['E', 'B', 'J']
+        flds_vec_str = ['E', 'B', 'J', 'G']
+        flds_scl_str = ['rho', ]
 
         flds_comps_str = []
-        for fld_str in flds_str:
+        for fld_str in flds_vec_str:
             for comp_str in self.Args['vec_comps']:
                 flds_comps_str.append(fld_str + comp_str)
 
-        flds_comps_str = ['rho',] + flds_comps_str
+        flds_comps_str = flds_comps_str + flds_scl_str
 
         for arg in flds_comps_str:
             arg += '_m'

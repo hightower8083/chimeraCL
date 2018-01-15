@@ -35,7 +35,7 @@ class TransformerMethodsCL(GenericMethodsCL):
         self._prepare_fft()
         self._prepare_dot()
 
-    def transform_field(self, arg_cmp, dir):
+    def transform_field(self, arg_cmp, dir, mode):
         # do the phase shift
         WGS, WGS_tot = self.get_wgs(self.Args['Nx'])
 
@@ -43,18 +43,25 @@ class TransformerMethodsCL(GenericMethodsCL):
                 np.double(self.Args['Xmin']), np.uint32(self.Args['Nx']) ]
         self._phase_knl[dir](self.queue, (WGS_tot, ), (WGS, ), *args).wait()
 
+        if mode=='full':
+            forward = self._transform_forward
+            backward = self._transform_backward
+        elif mode=='half':
+            forward = self._half_transform_forward
+            backward = self._half_transform_backward
+
         if dir == 0:
             dht_arg = 'DHT_m'
             arg_in = arg_cmp + '_m'
             arg_out = arg_cmp + '_fb_m'
-            self._transform_forward(dht_arg, arg_in, arg_out,
-                                    self.DataDev['phs_shft'])
+            transformer = forward
         elif dir == 1:
             dht_arg = 'DHT_inv_m'
             arg_in = arg_cmp + '_fb_m'
             arg_out = arg_cmp + '_m'
-            self._transform_backward(dht_arg, arg_in, arg_out,
-                                     self.DataDev['phs_shft'])
+            transformer = backward
+
+        transformer(dht_arg, arg_in, arg_out, self.DataDev['phs_shft'])
 
     def field_poiss_vec(self, fld):
         for m in range(0,self.Args['M']+1):
@@ -124,7 +131,6 @@ class TransformerMethodsCL(GenericMethodsCL):
 
                 self.zpaxz(self.DataDev[fld_z_m_out],
                            -1.j, self.DataDev['fld_buff0_c'])
-
 
     def field_div(self, vec_in, scl_out):
 
@@ -325,7 +331,7 @@ class TransformerMethodsCL(GenericMethodsCL):
             self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS, ),
                                         *phs_args).wait()
 
-    def _transform_backward(self, dht_arg,arg_in,arg_out,phs_shft):
+    def _transform_backward(self, dht_arg, arg_in, arg_out, phs_shft):
         dir = 1
         WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
 
@@ -375,6 +381,84 @@ class TransformerMethodsCL(GenericMethodsCL):
                        self.DataDev['fld_buff0_c'])
             enqueue_barrier(self.queue)
             self.DataDev[arg_out_m][1:] = self.DataDev['fld_buff1_c']
+
+######
+
+    def _half_transform_backward(self, dht_arg, arg_in, arg_out, phs_shft):
+        dir = 1
+        WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
+
+        # Copy and phase-shift the field
+        self.DataDev['fld_buff0_c'][:] = self.DataDev[arg_in+'0']
+
+        phs_str = ['NxNrm1', 'Nx']
+        phs_args = [self.DataDev[arg].data for arg in phs_str]
+        phs_args = [self.DataDev['fld_buff0_c'].data, ] + phs_args \
+                   + [phs_shft.data, ]
+
+        self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS, ),
+                                    *phs_args).wait()
+
+        # FFT of 0 mode and casting result to double dtype
+        self._fft(self.DataDev['fld_buff0_c'], self.DataDev['fld_buff0_c'], dir)
+        self.cast_array_c2d(self.DataDev['fld_buff0_c'],
+                            self.DataDev['fld_buff0_d'])
+
+        self.DataDev[arg_out+'0'][1:] = self.DataDev['fld_buff0_d']
+
+        # Same for m>0 modes
+        for m in range(1, self.Args['M']+1):
+            arg_in_m = arg_in + str(m)
+            arg_out_m = arg_out + str(m)
+
+            # Copy and phase-shift the field
+            self.DataDev['fld_buff0_c'][:] = self.DataDev[arg_in_m]
+            phs_str = ['NxNrm1', 'Nx']
+            phs_args = [self.DataDev[arg].data for arg in phs_str]
+            phs_args = [self.DataDev['fld_buff0_c'].data, ] + phs_args \
+                       + [phs_shft.data, ]
+            self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS, ),
+                                        *phs_args).wait()
+
+            # FFT of m mode into a temporal array
+            self._fft(self.DataDev['fld_buff0_c'], self.DataDev['fld_buff0_c'],
+                      dir)
+
+            self.DataDev[arg_out_m][1:] = self.DataDev['fld_buff0_c']
+
+    def _half_transform_forward(self, dht_arg, arg_in, arg_out, phs_shft):
+        dir = 0
+        WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
+
+        self.DataDev[arg_out+'0'][:] = self.DataDev[arg_in+'0'][1:].\
+                                        astype(np.complex128)
+        self._fft(self.DataDev[arg_out+'0'], self.DataDev[arg_out+'0'], dir)
+
+        # Phase shift of the result
+        phs_str = [arg_out+'0', 'NxNrm1', 'Nx']
+        phs_args = [self.DataDev[arg].data for arg in phs_str]
+        phs_args += [phs_shft.data, ]
+        self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS,),
+                                    *phs_args).wait()
+
+        # Same for m>0 modes
+        for m in range(1,self.Args['M']+1):
+            arg_in_m = arg_in + str(m)
+            arg_out_m = arg_out + str(m)
+
+            self.DataDev[arg_out_m][:] = self.DataDev[arg_in_m][1:]
+            self._fft(self.DataDev[arg_out_m], self.DataDev[arg_out_m], dir)
+
+            # Phase shift of the result
+            phs_str = [arg_out_m, 'NxNrm1', 'Nx']
+            phs_args = [self.DataDev[arg].data for arg in phs_str]
+            phs_args += [phs_shft.data, ]
+            self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS, ),
+                                        *phs_args).wait()
+
+#####
+
+
 
     def _prepare_dot(self):
         input_transform = self.dev_arr(dtype=np.double,

@@ -111,6 +111,17 @@ __kernel void advance_e_g_m(
     double dt_inv_loc = *dt_inv;
     double e1[3][2], g1[3][2];
 
+    double pi2 = 2 * M_PI;
+
+    for (int k=0;k<3;k++){
+        for (int i=0;i<2;i++){
+            j0[k][i] *= pi2;
+            n0[k][i] *= pi2;
+            n1[k][i] *= pi2;
+        }
+    }
+
+
     for (int k=0;k<3;k++){
         for (int i=0;i<2;i++){
             e1[k][i] = c1*e0[k][i] + c2*c3*(g0[k][i]-j0[k][i]) +

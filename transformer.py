@@ -14,16 +14,16 @@ class Transformer(TransformerMethodsCL):
         self._make_spectral_axes()
         self._make_DHT()
 
-    def fb_transform(self, scals=[], vects=[], dir=0):
+    def fb_transform(self, scals=[], vects=[], dir=0, mode='full'):
         """
         Warper for the Fourier-Bessel transforms of the groups
         of vectors and scalars
         """
         for sclr in scals:
-            self.transform_field(sclr, dir=dir)
+            self.transform_field(sclr, dir=dir, mode=mode)
         for vect in vects:
             for comp in self.Args['vec_comps']:
-                self.transform_field(vect+comp, dir=dir)
+                self.transform_field(vect+comp, dir=dir, mode=mode)
 
     def _make_spectral_axes(self):
         """
@@ -37,7 +37,7 @@ class Transformer(TransformerMethodsCL):
 
         kx = 2*np.pi*np.fft.fftfreq(Nx, dx)
 
-        R_period = self.Args['Rgrid'][-1] + 0.5*dr
+        R_period = self.Args['Rgrid'][-1] + 1.*dr
 
         self.Args['kx'] = kx
 
@@ -70,7 +70,7 @@ class Transformer(TransformerMethodsCL):
         """
 
         Rgrid = self.Args['Rgrid'][1:,None]
-        R_period = Rgrid[-1] + 0.5*self.Args['dr']
+        R_period = Rgrid[-1] + 1.*self.Args['dr']
 
         for m in range(self.Args['M']+1):
             # make spectral axes for the more m and satellite mode m+1 and m-1
