@@ -37,7 +37,7 @@ class Transformer(TransformerMethodsCL):
 
         kx = 2*np.pi*np.fft.fftfreq(Nx, dx)
 
-        R_period = self.Args['Rgrid'][-1] + 1.*dr
+        R_period = self.Args['Rgrid'][-1] + 0.5*dr
 
         self.Args['kx'] = kx
 
@@ -70,7 +70,7 @@ class Transformer(TransformerMethodsCL):
         """
 
         Rgrid = self.Args['Rgrid'][1:,None]
-        R_period = Rgrid[-1] + 1.*self.Args['dr']
+        R_period = Rgrid[-1] + 0.5*self.Args['dr']
 
         for m in range(self.Args['M']+1):
             # make spectral axes for the more m and satellite mode m+1 and m-1

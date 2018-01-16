@@ -57,6 +57,9 @@ class Grid(GridMethodsCL):
 
         flds_str = ['E', 'B']
 
+        for fld in flds_str:
+            self.preproc_project_vec(fld)
+
         for parts in species:
 
             if 'Immobile' in parts.Args.keys():

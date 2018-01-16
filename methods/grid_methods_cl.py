@@ -27,15 +27,19 @@ class GridMethodsCL(GenericMethodsCL):
         prg = Program(self.ctx, grid_sources).\
             build(options=compiler_options)
 
-        self._divide_by_dv_dbl_knl = prg.divide_by_dv_dbl
-        self._divide_by_dv_clx_knl = prg.divide_by_dv_clx
-        self._treat_axis_dbl_knl = prg.treat_axis_dbl
-        self._treat_axis_clx_knl = prg.treat_axis_clx
+        self._divide_by_dv_d_knl = prg.divide_by_dv_d
+        self._divide_by_dv_c_knl = prg.divide_by_dv_c
+        self._treat_axis_d_knl = prg.treat_axis_d
+        self._treat_axis_c_knl = prg.treat_axis_c
+        self._warp_axis_m0_d_knl = prg.warp_axis_m0_d
+        self._warp_axis_m1plus_c_knl = prg.warp_axis_m1plus_c
 
         self._depose_scalar_knl = prg.depose_scalar
         self._depose_vector_knl = prg.depose_vector
         self._project_scalar_knl = prg.project_scalar
         self._project_vec6_knl = prg.project_vec6
+
+
 
         if 'vec_comps' not in self.Args:
             self.Args['vec_comps'] = self.Args['default_vec_comps']
@@ -105,29 +109,27 @@ class GridMethodsCL(GenericMethodsCL):
 
         WGS, WGS_tot = self.get_wgs(self.Args['Nx'])
         enqueue_barrier(self.queue)
-        self._treat_axis_dbl_knl(self.queue,
-                                 (WGS_tot,), (WGS,),
-                                 args_grid[0], np.uint32(self.Args['Nx']))
+        self._treat_axis_d_knl(self.queue, (WGS_tot,), (WGS,),
+                               args_grid[0], np.uint32(self.Args['Nx']))
 
         for m in range(1,self.Args['M']+1):
-            self._treat_axis_clx_knl(self.queue,
-                                     (WGS_tot,), (WGS,),
-                                     args_grid[m], np.uint32(self.Args['Nx']))
+            self._treat_axis_c_knl(self.queue, (WGS_tot,), (WGS,),
+                                   args_grid[m], np.uint32(self.Args['Nx']))
         # Divide by radius
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr'])
         grid_str =  ['NxNr','Nx','dV_inv']
         grid_args = [self.DataDev[arg].data for arg in grid_str]
 
         enqueue_barrier(self.queue)
-        self._divide_by_dv_dbl_knl(self.queue,(WGS_tot,), (WGS,),
-                             args_grid[0],*grid_args)
+        self._divide_by_dv_d_knl(self.queue,(WGS_tot,), (WGS,),
+                                 args_grid[0],*grid_args)
 
         for m in range(1,self.Args['M']+1):
-            self._divide_by_dv_clx_knl(self.queue,(WGS_tot,), (WGS,),
-                                 args_grid[m],*grid_args)
+            self._divide_by_dv_c_knl(self.queue,(WGS_tot,), (WGS,),
+                                     args_grid[m],*grid_args)
         enqueue_barrier(self.queue)
 
-    def postproc_depose_vector(self,vec_fld):
+    def postproc_depose_vector(self, vec_fld):
         args_raddiv_str =  ['NxNr','Nx','dV_inv']
         args_raddiv = [self.DataDev[arg].data for arg in args_raddiv_str]
 
@@ -137,27 +139,43 @@ class GridMethodsCL(GenericMethodsCL):
                          for m in range(self.Args['M']+1)]
 
             WGS, WGS_tot = self.get_wgs(self.Args['Nx'])
-            self._treat_axis_dbl_knl(self.queue, (WGS_tot,), (WGS,),
-                                     args_fld[0], np.uint32(self.Args['Nx']))
+            self._treat_axis_d_knl(self.queue, (WGS_tot,), (WGS,),
+                                   args_fld[0], np.uint32(self.Args['Nx']))
 
             for m in range(1,self.Args['M']+1):
-                self._treat_axis_clx_knl(self.queue, (WGS_tot, ), (WGS, ),
-                                         args_fld[m],
-                                         np.uint32(self.Args['Nx']))
+                self._treat_axis_c_knl(self.queue, (WGS_tot, ), (WGS, ),
+                                       args_fld[m], np.uint32(self.Args['Nx']))
 
             # Divide by radius
             WGS, WGS_tot = self.get_wgs(self.Args['NxNr'])
             enqueue_barrier(self.queue)
-            self._divide_by_dv_dbl_knl(self.queue, (WGS_tot, ), (WGS, ),
+            self._divide_by_dv_d_knl(self.queue, (WGS_tot, ), (WGS, ),
                                       args_fld[0], *args_raddiv)
 
             for m in range(1,self.Args['M']+1):
-                self._divide_by_dv_clx_knl(self.queue,(WGS_tot, ), (WGS, ),
-                                          args_fld[m], *args_raddiv)
+                self._divide_by_dv_c_knl(self.queue,(WGS_tot, ), (WGS, ),
+                                         args_fld[m], *args_raddiv)
             enqueue_barrier(self.queue)
 
+    def preproc_project_vec(self, vec_fld):
+        WGS, WGS_tot = self.get_wgs(self.Args['Nx'])
+        for comp in self.Args['vec_comps']:
+            fld = vec_fld + comp
+
+            self._warp_axis_m0_d_knl(self.queue, (WGS_tot, ), (WGS, ),
+                                     self.DataDev[fld+'_m0'].data,
+                                     np.uint32(self.Args['Nx'])
+                                    ).wait()
+
+            for m in range(1,self.Args['M']+1):
+                self._warp_axis_m1plus_c_knl(self.queue, (WGS_tot, ), (WGS, ),
+                    self.DataDev[fld + '_m' + str(m)].data,
+                    np.uint32(self.Args['Nx'])).wait()
+
+
     def project_scalar(self, parts, sclr, fld):
-        part_str = ['sort_indx',sclr] + self.Args['vec_comps'] + ['cell_offset',]
+        part_str = ['sort_indx',sclr] + self.Args['vec_comps']\
+                   + ['cell_offset',]
 
         grid_str = ['Nx', 'Xmin', 'dx_inv',
                     'Nr', 'Rmin', 'dr_inv',

@@ -14,9 +14,9 @@ def add_gausian_pulse(solver, laser):
     Xgrid, Rgrid = solver.Args['Xgrid'],solver.Args['Rgrid'] # sin phase
     kx, w = solver.Args['kx'][None,:], solver.Args['w_m0']
 
-    solver.DataDev['Ez_m0'][:] = a0 * np.sin(k0*(Xgrid[None,:]-x0)) \
-          * np.exp(-(Xgrid[None,:]-x0)**2/Lx**2 - Rgrid[:,None]**2/R**2) \
-          * (abs(Rgrid[:,None]) < 3.5*R) * (abs(Xgrid[None,:]-x0) < 3.5*Lx)
+    solver.DataDev['Ez_m0'][1:] = a0 * np.sin(k0*(Xgrid[None,:]-x0)) \
+          * np.exp(-(Xgrid[None,:]-x0)**2/Lx**2 - Rgrid[1:,None]**2/R**2) \
+          * (abs(Rgrid[1:,None]) < 3.5*R) * (abs(Xgrid[None,:]-x0) < 3.5*Lx)
 
     solver.fb_transform(scals=['Ez',], dir=0)
     EE = solver.DataDev['Ez_fb_m0'].get()
