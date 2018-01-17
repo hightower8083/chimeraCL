@@ -16,6 +16,8 @@ class Frame():
 
         if 'dt' not in self.Args:
             self.Args['dt'] = 1
+        if 'DensityProfiles' not in self.Args:
+            self.Args['DensityProfiles'] = None
 
     def shift_grids(self, grids=[], steps=None):
         if steps is None:
@@ -43,7 +45,8 @@ class Frame():
             inject_domain['Rmin'] = grid.Args['Rmin']*(grid.Args['Rmin']>0)
             inject_domain['Rmax'] = grid.Args['Rmax']
 
-            specie.make_new_domain(inject_domain)
+            specie.make_new_domain(inject_domain,
+                density_profiles=self.Args['DensityProfiles'])
 
             if 'InjectorSource' in specie.Args.keys():
                 specie.add_new_particles(specie.Args['InjectorSource'])

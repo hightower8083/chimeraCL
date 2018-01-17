@@ -2,6 +2,33 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
 #pragma OPENCL EXTENSION cl_khr_fp64:enable
 
+// Multiply particles weight by an intrpolant profile
+__kernel void profile_by_interpolant(
+  __global double *x,
+  __global double *w,
+           uint Np,
+  __global double *xx_loc,
+  __global double *ff_loc,
+  __global double *dxm1_loc,
+           uint Nx_loc)
+{
+  uint ip = (uint) get_global_id(0);
+  if (ip < Np)
+   {
+     double xp = x[ip];
+     uint ix;
+
+     for (ix=0; ix<Nx_loc-1; ix++){
+       if (xp>xx_loc[ix] && xp<=xx_loc[ix+1]) {break;}
+     }
+
+     double f_minus = ff_loc[ix]*dxm1_loc[ix];
+     double f_plus = ff_loc[ix+1]*dxm1_loc[ix];
+
+     w[ip] *= f_minus*(xx_loc[ix+1]-x[ip]) + f_plus*(x[ip]-xx_loc[ix]);
+   }
+}
+
 // Fill given grid with uniformly distributed particles
 __kernel void fill_grid(
   __global double *x,

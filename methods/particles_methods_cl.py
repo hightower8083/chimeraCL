@@ -13,6 +13,26 @@ from .generic_methods_cl import compiler_options
 from chimeraCL import __path__ as src_path
 src_path = src_path[0] + '/kernels/'
 
+"""
+# For tests
+from numba import jit
+@jit
+def dens_profile_knl(x, w, x_loc, f_loc, dxm1_loc):
+    Np = x.shape[0]
+    for ip in range(Np):
+        for ip_loc in range(x_loc.shape[0]-1):
+            if x[ip]>x_loc[ip_loc] and x[ip]<x_loc[ip_loc+1]:
+                break
+        f_minus = f_loc[ip_loc]*dxm1_loc[ip_loc]
+        f_plus = f_loc[ip_loc+1]*dxm1_loc[ip_loc]
+        w[ip] *= f_minus*(x_loc[ip_loc+1]-x[ip]) + f_plus*(x[ip]-x_loc[ip_loc])
+    return w
+
+#        w = self.DataDev[weight].get()
+#        x = self.DataDev[coord].get()
+#        w = dens_profile_knl(x, w, x_loc, f_loc, dxm1_loc)
+#        self.DataDev[weight][:] = w
+"""
 
 class ParticleMethodsCL(GenericMethodsCL):
     def init_particle_methods(self):
@@ -41,6 +61,8 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._push_xyz_knl = prg.push_xyz
         self._push_p_boris_knl = prg.push_p_boris
         self._fill_grid_knl = prg.fill_grid
+        self._profile_by_interpolant_knl = prg.profile_by_interpolant
+
 
     def add_new_particles(self, source=None):
         args_strs = ['x', 'y', 'z', 'px', 'py', 'pz', 'w', 'g_inv']
@@ -75,7 +97,7 @@ class ParticleMethodsCL(GenericMethodsCL):
             self.DataDev[arg] = self.dev_arr(val=0, dtype=np.double,
                 shape=self.Args['Np'], allocator=self.DataDev[arg + '_mp'])
 
-    def make_new_domain(self, parts_in):
+    def make_new_domain(self, parts_in, density_profiles=None):
         args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w']
 
         xmin, xmax, rmin, rmax = \
@@ -111,6 +133,19 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._fill_grid_knl(self.queue, (WGS_tot, ), (WGS, ), *gn_args).wait()
 
         self.DataDev['w_new'] *= self.Args['w0']
+
+        if density_profiles is not None:
+            for profile in density_profiles:
+                if profile['coord'] == 'x':
+                    xmin, xmax = parts_in['Xmin'], parts_in['Xmax']
+                else:
+                    print('Only longitudinal profiling is implemented')
+                    continue
+
+                coord = profile['coord'] + '_new'
+                x_prf = profile['points']
+                f_prf = profile['values']
+                self.dens_profile(x_prf, f_prf, xmin, xmax, coord=coord, weight='w_new')
 
         for arg in ['px', 'py', 'pz']:
             if ('d'+arg in parts_in):
@@ -163,6 +198,33 @@ class ParticleMethodsCL(GenericMethodsCL):
             1 + self.DataDev['px_new']*self.DataDev['px_new']
             + self.DataDev['py_new']*self.DataDev['py_new']
             + self.DataDev['pz_new']*self.DataDev['pz_new'])
+
+    def dens_profile(self, x_prf, f_prf, xmin, xmax, coord='x', weight='w'):
+
+        x_prf = np.array(x_prf,dtype=np.double)
+        f_prf = np.array(f_prf,dtype=np.double)
+
+        i_start = (x_prf<xmin).sum()-1
+        i_stop  = (x_prf<xmax).sum()+1
+
+        x_loc = x_prf[i_start:i_stop]
+        f_loc = f_prf[i_start:i_stop]
+        dxm1_loc = 1./(x_loc[1:] - x_loc[:-1])
+
+        Np = self.DataDev[coord].size
+        Nx_loc = x_loc.size
+
+        x_loc = self.dev_arr(val=x_loc)
+        f_loc = self.dev_arr(val=f_loc)
+        dxm1_loc = self.dev_arr(val=dxm1_loc)
+
+        WGS, WGS_tot = self.get_wgs(Np)
+        self._profile_by_interpolant_knl(self.queue, (WGS_tot, ), (WGS, ),
+                                         self.DataDev[coord].data,
+                                         self.DataDev[weight].data,
+                                         np.uint32(Np), x_loc.data,
+                                         f_loc.data, dxm1_loc.data,
+                                         np.uint32(Nx_loc)).wait()
 
     def reset_num_parts(self):
         Np = self.DataDev['x'].size
