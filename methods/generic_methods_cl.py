@@ -79,9 +79,9 @@ class GenericMethodsCL:
         if type(val) is np.ndarray:
             arr = self.thr.to_device(val)
         elif val==0:
-            arr = zeros(self.queue, shape, dtype=dtype, allocator=allocator)
+            arr = zeros(self.queue, shape, dtype=dtype) # , allocator=allocator)
         else:
-            arr = empty(self.queue, shape, dtype=dtype, allocator=allocator)
+            arr = empty(self.queue, shape, dtype=dtype) #, allocator=allocator)
             if val is not None:
                 self.set_to(arr,val)
         return arr

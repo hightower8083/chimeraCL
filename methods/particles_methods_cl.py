@@ -343,8 +343,15 @@ class ParticleMethodsCL(GenericMethodsCL):
     def _cumsum(self,arr_in):
         evnt, arr_tmp = cumsum(arr_in, return_event=True, queue=self.queue)
         arr_out = self.dev_arr(dtype=np.uint32, shape=arr_tmp.size+1,
-                               allocator=self.DataDev['sort_indx_mp'])
+                               allocator=self.DataDev['cell_offset_mp'])
         arr_out[0] = 0
         evnt.wait()
         arr_out[1:] = arr_tmp[:]
         return arr_out
+
+    def free_mp(self):
+        for key in self.DataDev.keys():
+            if key[-3:]=='_mp':
+                self.DataDev[key].free_held()
+
+

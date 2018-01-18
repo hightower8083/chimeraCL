@@ -15,6 +15,10 @@ class PIC_loop:
                 frame.shift_grids(grids=self.solvers)
                 frame.inject_plasma(species=self.species, grid=self.mainsolver)
 
+        if np.mod(self.it, frame.Args['Steps']) == 0:
+            for parts in self.species:
+                parts.free_mp()
+
         for parts in self.species:
             parts.push_coords(mode='half')
             parts.sort_parts(grid=self.mainsolver)
