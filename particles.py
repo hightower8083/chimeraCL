@@ -79,7 +79,8 @@ class Particles(ParticleMethodsCL):
 
         self.flag_sorted = False
 
-        self.Args['dont_send'] = ['InjectorSource','charge','mass', 'dens','Immobile']
+        self.Args['dont_send'] = ['InjectorSource','charge','mass',
+                                  'dens','Immobile']
         self.Args['dont_keep'] = []
 
     def _init_grid_data_on_dev(self):

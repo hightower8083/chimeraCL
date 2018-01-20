@@ -72,7 +72,19 @@ class Grid(GridMethodsCL):
 
             for arg in flds_comps_str:
                 self.set_to(parts.DataDev[arg], 0)
-            self.project_vec6(parts, flds_str, flds_str)
+            self.project_vec6_dev(parts, flds_str, flds_str)
+
+    def gather_and_push(self, species=[]):
+
+        for fld in ['E', 'B']:
+            self.preproc_project_vec(fld)
+
+        for parts in species:
+
+            if 'Immobile' in parts.Args.keys():
+                continue
+
+            self._gather_and_push(parts, ['E', 'B'])
 
     def _process_configs(self, configs_in):
         self.Args = configs_in
