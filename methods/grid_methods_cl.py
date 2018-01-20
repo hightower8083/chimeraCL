@@ -37,8 +37,6 @@ class GridMethodsCL(GenericMethodsCL):
         self._depose_scalar_knl = prg.depose_scalar
         self._depose_vector_knl = prg.depose_vector
         self._project_vec6_knl = prg.project_vec6
-        self._project_vec6_alt_knl = prg.project_vec6_alt
-        self._gather_and_push_knl = prg.gather_and_push
 
         if 'vec_comps' not in self.Args:
             self.Args['vec_comps'] = self.Args['default_vec_comps']
@@ -195,58 +193,3 @@ class GridMethodsCL(GenericMethodsCL):
 
         WGS, WGS_tot = self.get_wgs(self.Args['Nxm1Nrm1'])
         evnt = self._project_vec6_knl(self.queue, (WGS_tot, ), (WGS, ),*args)
-
-    def project_vec6_dev(self, parts, vecs, flds):
-        part_str = ['sort_indx',] + \
-                   [vecs[0] + comp for comp in self.Args['vec_comps']] + \
-                   [vecs[1] + comp for comp in self.Args['vec_comps']] + \
-                   self.Args['vec_comps'] + ['cell_offset',]
-
-        Np_stay = parts.DataDev['cell_offset'][-1].get().item()
-
-        grid_str = ['Nx', 'Xmin', 'dx_inv',
-                    'Nr', 'Rmin', 'dr_inv',
-                    'Nxm1Nrm1']
-
-        fld_str = []
-        for m in range(self.Args['M']+1):
-            for fld in flds:
-                for comp in self.Args['vec_comps']:
-                    fld_str.append(fld + comp + '_m' + str(m))
-
-        args_parts = [parts.DataDev[arg].data for arg in part_str]
-        args_grid = [self.DataDev[arg].data for arg in grid_str]
-        args_fld = [self.DataDev[arg].data for arg in fld_str]
-
-        args = args_parts + [np.uint32(Np_stay),] \
-               + args_grid + args_fld
-
-        WGS, WGS_tot = self.get_wgs(Np_stay)
-        evnt = self._project_vec6_alt_knl(self.queue, (WGS_tot, ), (WGS, ),
-                                          *args).wait()
-
-    def _gather_and_push(self, parts, flds):
-        part_str = ['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv',
-                    'sort_indx','cell_offset', 'FactorPush']
-
-        Np_stay = parts.DataDev['cell_offset'][-1].get().item()
-
-        grid_str = ['Nx', 'Xmin', 'dx_inv',
-                    'Nr', 'Rmin', 'dr_inv',
-                    'Nxm1Nrm1']
-
-        fld_str = []
-        for m in range(self.Args['M']+1):
-            for fld in flds:
-                for comp in self.Args['vec_comps']:
-                    fld_str.append(fld + comp + '_m' + str(m))
-
-        args_parts = [parts.DataDev[arg].data for arg in part_str]
-        args_grid = [self.DataDev[arg].data for arg in grid_str]
-        args_fld = [self.DataDev[arg].data for arg in fld_str]
-
-        args = args_parts + [np.uint32(Np_stay),] + args_grid + args_fld
-
-        WGS, WGS_tot = self.get_wgs(Np_stay)
-        self._gather_and_push_knl(self.queue, (WGS_tot, ), (WGS, ),
-                                  *args).wait()
