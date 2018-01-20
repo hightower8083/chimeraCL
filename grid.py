@@ -53,27 +53,6 @@ class Grid(GridMethodsCL):
 
         self.postproc_depose_vector('J')
 
-    def project_fields(self, species=[]):
-
-        flds_str = ['E', 'B']
-
-        for fld in flds_str:
-            self.preproc_project_vec(fld)
-
-        for parts in species:
-
-            if 'Immobile' in parts.Args.keys():
-                continue
-
-            flds_comps_str = []
-            for fld_str in flds_str:
-                for comp_str in self.Args['vec_comps']:
-                    flds_comps_str.append(fld_str + comp_str)
-
-            for arg in flds_comps_str:
-                self.set_to(parts.DataDev[arg], 0)
-            self.project_vec6_dev(parts, flds_str, flds_str)
-
     def gather_and_push(self, species=[]):
 
         for fld in ['E', 'B']:

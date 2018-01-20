@@ -40,8 +40,8 @@ class Particles(ParticleMethodsCL):
         if self.Args['Np'] == 0:
             return
 
-        self.align_and_damp(
-            comps_align=['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv', 'w'])
+        self.align_and_damp(comps_align=['x', 'y', 'z', 'px', 'py', 'pz',
+                                         'g_inv', 'w'])
 
     def _process_configs(self, configs_in):
         self.Args = configs_in
@@ -94,19 +94,6 @@ class Particles(ParticleMethodsCL):
                 self.DataDev[arg + tmp_type] = self.dev_arr(shape=0,
                     allocator=self.DataDev[arg + tmp_type + '_mp'],
                     dtype=np.double)
-
-        flds_comps_str = []
-        for fld_str in ('E', 'B'):
-            for comp_str in ('x', 'y', 'z'):
-                flds_comps_str.append(fld_str + comp_str)
-
-        for arg in flds_comps_str:
-            self.DataDev[arg + '_mp'] = \
-                MemoryPool(ImmediateAllocator(self.comm.queue))
-
-            self.DataDev[arg] = self.dev_arr(shape=0,
-                allocator=self.DataDev[arg + '_mp'],
-                dtype=np.double)
 
         for arg in ['cell_offset', 'Xgrid_loc', 'Rgrid_loc', 'theta_variator',
                     'indx_in_cell', 'sort_indx']:

@@ -13,26 +13,7 @@ from .generic_methods_cl import compiler_options
 from chimeraCL import __path__ as src_path
 src_path = src_path[0] + '/kernels/'
 
-"""
-# For tests
-from numba import jit
-@jit
-def dens_profile_knl(x, w, x_loc, f_loc, dxm1_loc):
-    Np = x.shape[0]
-    for ip in range(Np):
-        for ip_loc in range(x_loc.shape[0]-1):
-            if x[ip]>x_loc[ip_loc] and x[ip]<x_loc[ip_loc+1]:
-                break
-        f_minus = f_loc[ip_loc]*dxm1_loc[ip_loc]
-        f_plus = f_loc[ip_loc+1]*dxm1_loc[ip_loc]
-        w[ip] *= f_minus*(x_loc[ip_loc+1]-x[ip]) + f_plus*(x[ip]-x_loc[ip_loc])
-    return w
 
-#        w = self.DataDev[weight].get()
-#        x = self.DataDev[coord].get()
-#        w = dens_profile_knl(x, w, x_loc, f_loc, dxm1_loc)
-#        self.DataDev[weight][:] = w
-"""
 
 class ParticleMethodsCL(GenericMethodsCL):
     def init_particle_methods(self):
@@ -59,10 +40,8 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._data_align_int_knl = prg.data_align_int
         self._index_and_sum_knl = prg.index_and_sum_in_cell
         self._push_xyz_knl = prg.push_xyz
-        self._push_p_boris_knl = prg.push_p_boris
         self._fill_grid_knl = prg.fill_grid
         self._profile_by_interpolant_knl = prg.profile_by_interpolant
-
 
     def add_new_particles(self, source=None):
         args_strs = ['x', 'y', 'z', 'px', 'py', 'pz', 'w', 'g_inv']
@@ -84,18 +63,7 @@ class ParticleMethodsCL(GenericMethodsCL):
             self.DataDev[arg] = buff
 
         self.reset_num_parts()
-        self.realloc_field_arrays()
         self.flag_sorted = False
-
-    def realloc_field_arrays(self):
-        flds_comps_str = []
-        for fld_str in ('E', 'B'):
-            for comp_str in ('x', 'y', 'z'):
-                flds_comps_str.append(fld_str + comp_str)
-
-        for arg in flds_comps_str:
-            self.DataDev[arg] = self.dev_arr(val=0, dtype=np.double,
-                shape=self.Args['Np'], allocator=self.DataDev[arg + '_mp'])
 
     def make_new_domain(self, parts_in, density_profiles=None):
         args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w']
@@ -250,22 +218,6 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._push_xyz_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
         self.flag_sorted = False
 
-    def push_veloc(self):
-        if self.Args['Np'] == 0:
-            return
-
-        if 'Immobile' in self.Args.keys():
-            return
-
-        WGS, WGS_tot = self.get_wgs(self.Args['Np'])
-
-        args_strs =  ['px','py','pz','g_inv',
-                      'Ex','Ey','Ez',
-                      'Bx','By','Bz','FactorPush','Np']
-
-        args = [self.DataDev[arg].data for arg in args_strs]
-        self._push_p_boris_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
-
     def index_sort(self, grid):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
@@ -353,5 +305,3 @@ class ParticleMethodsCL(GenericMethodsCL):
         for key in self.DataDev.keys():
             if key[-3:]=='_mp':
                 self.DataDev[key].free_held()
-
-
