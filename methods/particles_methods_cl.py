@@ -286,12 +286,12 @@ class ParticleMethodsCL(GenericMethodsCL):
         self.reset_num_parts()
 
     def _fill_arr_randn(self, arr, mu=0, sigma=1):
-        return self._generator_knl.fill_normal(ary=arr, queue=self.queue,
-                                               mu=mu, sigma=sigma)
+        self._generator_knl.fill_normal(ary=arr, queue=self.queue,
+                                        mu=mu, sigma=sigma).wait()
 
     def _fill_arr_rand(self, arr, xmin=0, xmax=1):
-        return self._generator_knl.fill_uniform(ary=arr, queue=self.queue,
-                                                a=xmin,b=xmax)
+        self._generator_knl.fill_uniform(ary=arr, queue=self.queue,
+                                         a=xmin,b=xmax).wait()
 
     def _cumsum(self, arr_in, allocator=None):
         evnt, arr_tmp = cumsum(arr_in, return_event=True, queue=self.queue)
