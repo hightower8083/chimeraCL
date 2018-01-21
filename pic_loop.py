@@ -9,7 +9,6 @@ loop_steps = ['frame', 'push-x', 'sort', 'depose',
 
 def timer_plot(Timer):
     import matplotlib.pyplot as plt
-#    import random
 
     fig, ax = plt.subplots(figsize=(16,5))
     Timer_keys = list(Timer.keys())
@@ -21,8 +20,6 @@ def timer_plot(Timer):
     ax.set_xticklabels(Timer_keys)
 
     cnames = 2*['b', 'g', 'r', 'c', 'm', 'y', 'k',]
-
-#    random.shuffle(cnames)
     color_ind = 0
     for bar in bars:
         bar.set_facecolor(cnames[color_ind])
@@ -62,8 +59,6 @@ class PIC_loop:
                 frame.shift_grids(grids=self.solvers)
                 frame.inject_plasma(species=self.species, grid=self.mainsolver)
 
-                for parts in self.species:
-                    parts.free_mp()
         self.timer_record('frame')
 
         for parts in self.species:
@@ -133,6 +128,9 @@ class PIC_loop:
             self.timer_start()
             solver.gather_and_push(species=self.species)
             self.timer_record('gather + push-p')
+
+        for parts in self.species:
+            parts.free_mp()
 
         self.it +=1
         return self.it

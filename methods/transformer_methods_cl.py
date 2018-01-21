@@ -382,8 +382,6 @@ class TransformerMethodsCL(GenericMethodsCL):
             enqueue_barrier(self.queue)
             self.DataDev[arg_out_m][1:] = self.DataDev['fld_buff1_c']
 
-######
-
     def _half_transform_backward(self, dht_arg, arg_in, arg_out, phs_shft):
         dir = 1
         WGS, WGS_tot = self.get_wgs(self.Args['NxNrm1'])
@@ -455,9 +453,6 @@ class TransformerMethodsCL(GenericMethodsCL):
             phs_args += [phs_shft.data, ]
             self._multiply_by_phase_knl(self.queue, (WGS_tot, ), (WGS, ),
                                         *phs_args).wait()
-
-#####
-
 
 
     def _prepare_dot(self):

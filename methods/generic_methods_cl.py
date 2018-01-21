@@ -12,8 +12,8 @@ from reikna.cluda import ocl_api
 from chimeraCL import __path__ as src_path
 src_path = src_path[0] + '/kernels/'
 
-#compiler_options = ['-cl-fast-relaxed-math',]
-compiler_options = []
+compiler_options = ['-cl-fast-relaxed-math',]
+#compiler_options = []
 
 
 class GenericMethodsCL:
@@ -41,7 +41,7 @@ class GenericMethodsCL:
         if self.dev_type=='CPU':
             self.WGS = 32
         else:
-            self.WGS = 256 #self.ctx.devices[0].max_work_group_size
+            self.WGS = 512 #self.ctx.devices[0].max_work_group_size
 
         self.block_def_str = "#define BLOCK_SIZE {:d}\n".format(self.WGS)
 
@@ -79,11 +79,11 @@ class GenericMethodsCL:
         if type(val) is np.ndarray:
             arr = self.thr.to_device(val)
         elif val==0:
-            arr = zeros(self.queue, shape, dtype=dtype) # , allocator=allocator)
+            arr = zeros(self.queue, shape, dtype=dtype, allocator=allocator)
         else:
-            arr = empty(self.queue, shape, dtype=dtype) #, allocator=allocator)
+            arr = empty(self.queue, shape, dtype=dtype, allocator=allocator)
             if val is not None:
-                self.set_to(arr,val)
+                self.set_to(arr, val)
         return arr
 
     def cast_array_c2d(self,arr_in, arr_out):

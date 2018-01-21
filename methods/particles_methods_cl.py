@@ -16,6 +16,7 @@ src_path = src_path[0] + '/kernels/'
 
 
 class ParticleMethodsCL(GenericMethodsCL):
+
     def init_particle_methods(self):
         self.init_generic_methods()
         self.set_global_working_group_size()
@@ -219,10 +220,11 @@ class ParticleMethodsCL(GenericMethodsCL):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
         self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
-            shape=self.Args['Np'])
+            shape=self.Args['Np'], allocator=self.DataDev['indx_in_cell_mp'])
 
         self.DataDev['cell_offset'] = self.dev_arr(val=0,
-            dtype=np.uint32, shape=grid.Args['Nxm1Nrm1'])
+            dtype=np.uint32, shape=grid.Args['Nxm1Nrm1'],
+            allocator=self.DataDev['cell_offset_mp'])
 
         part_strs =  ['x', 'y', 'z', 'cell_offset', 'Np']
         grid_strs =  ['Nx', 'Xmin', 'dx_inv',
@@ -233,18 +235,23 @@ class ParticleMethodsCL(GenericMethodsCL):
                [grid.DataDev[arg].data for arg in grid_strs]
 
         self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
-        self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'])
+
+        self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'],
+            allocator=self.DataDev['cell_offset_mp'])
 
         if self.comm.sort_method == 'Radix':
             indx_size = self.DataDev['indx_in_cell'].size
             self.DataDev['sort_indx'] = arange(self.queue, 0, indx_size, 1,
-                dtype=np.uint32)
+                dtype=np.uint32, allocator=self.DataDev['sort_indx_mp'])
 
             (self.DataDev['indx_in_cell'], self.DataDev['sort_indx']), evnt = \
                 self._sort_rdx_knl(self.DataDev['indx_in_cell'],
-                self.DataDev['sort_indx'])
-
+                                   self.DataDev['sort_indx'],
+                                   key_bits=len(bin(self.Args['Np'])),
+                                   allocator=self.DataDev['indx_in_cell_mp'])
             evnt.wait()
+
+
         elif self.comm.sort_method == 'NumPy':
                 self.DataDev['sort_indx'] = \
                     self.DataDev['indx_in_cell'].get().argsort()
@@ -286,9 +293,10 @@ class ParticleMethodsCL(GenericMethodsCL):
         return self._generator_knl.fill_uniform(ary=arr, queue=self.queue,
                                                 a=xmin,b=xmax)
 
-    def _cumsum(self,arr_in):
+    def _cumsum(self, arr_in, allocator=None):
         evnt, arr_tmp = cumsum(arr_in, return_event=True, queue=self.queue)
-        arr_out = self.dev_arr(dtype=np.uint32, shape=arr_tmp.size+1)
+        arr_out = self.dev_arr(dtype=np.uint32, shape=arr_tmp.size+1,
+                               allocator=allocator)
         arr_out[0] = 0
         evnt.wait()
         arr_out[1:] = arr_tmp[:]

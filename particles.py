@@ -16,7 +16,6 @@ class Particles(ParticleMethodsCL):
         self._process_configs(configs_in)
 
         self.send_args_to_dev()
-
         self._init_data_on_dev()
 
     def sort_parts(self, grid):
@@ -88,3 +87,8 @@ class Particles(ParticleMethodsCL):
         args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w','g_inv']
         for arg in args_strs:
             self.DataDev[arg] = self.dev_arr(shape=0,dtype=np.double)
+
+        for arg in ['cell_offset', 'indx_in_cell', 'sort_indx']:
+            allocator = ImmediateAllocator(self.comm.queue)
+            self.DataDev[arg + '_mp'] = MemoryPool(allocator)
+
