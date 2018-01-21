@@ -458,8 +458,6 @@ class TransformerMethodsCL(GenericMethodsCL):
 
 #####
 
-
-
     def _prepare_dot(self):
         input_transform = self.dev_arr(dtype=np.double,
                                        shape=(self.Args['Nr']-1,

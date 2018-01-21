@@ -59,9 +59,7 @@ class SolverMethodsCL(GenericMethodsCL):
             args_fld = [self.DataDev[arg].data for arg in fld_str]
 
             args = args_solver + args_fld
-
-            self._advance_e_g_m_knl(self.queue, (WGS_tot, ), (WGS, ),*args)
-        enqueue_barrier(self.queue)
+            self._advance_e_g_m_knl(self.queue, (WGS_tot, ), (WGS, ),*args).wait()
 
     def profile_edges(self, flds):
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr'])

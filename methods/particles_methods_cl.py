@@ -13,26 +13,6 @@ from .generic_methods_cl import compiler_options
 from chimeraCL import __path__ as src_path
 src_path = src_path[0] + '/kernels/'
 
-"""
-# For tests
-from numba import jit
-@jit
-def dens_profile_knl(x, w, x_loc, f_loc, dxm1_loc):
-    Np = x.shape[0]
-    for ip in range(Np):
-        for ip_loc in range(x_loc.shape[0]-1):
-            if x[ip]>x_loc[ip_loc] and x[ip]<x_loc[ip_loc+1]:
-                break
-        f_minus = f_loc[ip_loc]*dxm1_loc[ip_loc]
-        f_plus = f_loc[ip_loc+1]*dxm1_loc[ip_loc]
-        w[ip] *= f_minus*(x_loc[ip_loc+1]-x[ip]) + f_plus*(x[ip]-x_loc[ip_loc])
-    return w
-
-#        w = self.DataDev[weight].get()
-#        x = self.DataDev[coord].get()
-#        w = dens_profile_knl(x, w, x_loc, f_loc, dxm1_loc)
-#        self.DataDev[weight][:] = w
-"""
 
 class ParticleMethodsCL(GenericMethodsCL):
     def init_particle_methods(self):
@@ -333,12 +313,12 @@ class ParticleMethodsCL(GenericMethodsCL):
         self.reset_num_parts()
 
     def _fill_arr_randn(self, arr, mu=0, sigma=1):
-        return self._generator_knl.fill_normal(ary=arr, queue=self.queue,
-                                               mu=mu, sigma=sigma)
+        self._generator_knl.fill_normal(ary=arr, queue=self.queue,
+                                        mu=mu, sigma=sigma).wait()
 
     def _fill_arr_rand(self, arr, xmin=0, xmax=1):
-        return self._generator_knl.fill_uniform(ary=arr, queue=self.queue,
-                                                a=xmin,b=xmax)
+        self._generator_knl.fill_uniform(ary=arr, queue=self.queue,
+                                         a=xmin,b=xmax).wait()
 
     def _cumsum(self,arr_in):
         evnt, arr_tmp = cumsum(arr_in, return_event=True, queue=self.queue)
