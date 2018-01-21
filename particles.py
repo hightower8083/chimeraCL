@@ -17,7 +17,7 @@ class Particles(ParticleMethodsCL):
 
         self.send_args_to_dev()
 
-        self._init_grid_data_on_dev()
+        self._init_data_on_dev()
 
     def sort_parts(self, grid):
         if self.Args['Np'] == 0:
@@ -83,19 +83,8 @@ class Particles(ParticleMethodsCL):
                                   'dens','Immobile']
         self.Args['dont_keep'] = []
 
-    def _init_grid_data_on_dev(self):
+    def _init_data_on_dev(self):
 
         args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w','g_inv']
         for arg in args_strs:
-            for tmp_type in ('', '_new'):
-                self.DataDev[arg + tmp_type + '_mp'] = \
-                    MemoryPool(ImmediateAllocator(self.comm.queue))
-
-                self.DataDev[arg + tmp_type] = self.dev_arr(shape=0,
-                    allocator=self.DataDev[arg + tmp_type + '_mp'],
-                    dtype=np.double)
-
-        for arg in ['cell_offset', 'Xgrid_loc', 'Rgrid_loc', 'theta_variator',
-                    'indx_in_cell', 'sort_indx']:
-            self.DataDev[arg + '_mp'] = \
-                MemoryPool(ImmediateAllocator(self.comm.queue))
+            self.DataDev[arg] = self.dev_arr(shape=0,dtype=np.double)
