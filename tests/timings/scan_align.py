@@ -5,8 +5,8 @@ num_ps = range(10**6,7*10**6,10**6)
 Nint = 20
 Nheatup = 5
 
-answers_cpu = [0,]
-answers_gpu = None
+answers_cpu = None #[0,]
+answers_gpu = [0,]
 
 gpu_noal_np = []
 cpu_noal_np = []

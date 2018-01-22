@@ -3,11 +3,11 @@ from tests.timings.time_depose_current import run_test
 
 Nint = 30
 Nheatup = 10
-num_ps = range(10**6,7*10**6,10**6)
-grid_sizes = range(1,9,1)
+num_ps = range(10**6,5*10**6,10**6)
+grid_sizes = range(1,5,1)
 
-answers_cpu = [0,]
-answers_gpu = None
+answers_cpu = None
+answers_gpu = [0,]
 
 gpu_al_np = []
 gpu_noal_np = []

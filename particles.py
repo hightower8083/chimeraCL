@@ -1,60 +1,46 @@
-from numpy import uint32, double, arange
+import numpy as np
 
-from chimeraCL.methods.particles_methods_cl import ParticleMethodsCL, sqrt
-
+from chimeraCL.methods.particles_methods_cl import ParticleMethodsCL
+from chimeraCL.methods.particles_methods_cl import sqrt
+from pyopencl.tools import MemoryPool, ImmediateAllocator
 
 class Particles(ParticleMethodsCL):
     def __init__(self, configs_in, comm=None):
-
         if comm is not None:
-            # taking some pointers from the communicator
-            self.comm = comm
-            self.queue = comm.queue
-            self.ctx = comm.ctx
-            self.thr = comm.thr
-            self.dev_type = comm.dev_type
-            self.plat_name = comm.plat_name
+            self.import_comm(comm)
 
+        self.set_global_working_group_size()
+
+        self.DataDev = {}
+        self.init_particle_methods()
         self._process_configs(configs_in)
-        self._send_grid_to_dev()
-        self._compile_methods()
 
-    def make_parts(self, beam_in):
-        # make Gaussian beam (to-be-replaced by grid-population routine)
-
-        Np = beam_in['Np']
-        for arg in ['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv', 'w',
-                    'Ex', 'Ey', 'Ez', 'Bx', 'By', 'Bz']:
-            self.DataDev[arg] = self.dev_arr(val=0, shape=Np, dtype=double)
-
-        for arg in ['x', 'y', 'z']:
-            self.fill_arr_randn(self.DataDev[arg],
-                                mu=beam_in[arg+'_c'],
-                                sigma=beam_in['L'+arg])
-
-        for arg in ['px', 'py', 'pz']:
-            self.fill_arr_randn(self.DataDev[arg],
-                                mu=beam_in[arg+'_c'],
-                                sigma=beam_in['d'+arg])
-
-        self.DataDev['g_inv'] = 1./sqrt(1. +
-                                        self.DataDev['px']*self.DataDev['px'] +
-                                        self.DataDev['py']*self.DataDev['py'] +
-                                        self.DataDev['pz']*self.DataDev['pz'])
-
-        self.DataDev['w'][:] = self.Args['q']
-        self.DataDev['indx_in_cell'] = self.dev_arr(val=0, dtype=uint32,
-                                                    shape=Np)
-        self.reset_num_parts()
+        self.send_args_to_dev()
+        self._init_data_on_dev()
 
     def sort_parts(self, grid):
-        self.index_and_sum(grid)
-        self.index_sort()
+        if self.Args['Np'] == 0:
+            self.flag_sorted = True
+
+        if self.flag_sorted == False:
+            self.index_sort(grid)
+            self.flag_sorted = True
+
+    def add_particles(self, domain_in=None, beam_in=None):
+        # To be removed
+        if domain_in is not None:
+            self.make_new_domain(domain_in)
+        elif beam_in is not None:
+            self.make_new_beam(beam_in)
+
+        self.add_new_particles()
 
     def align_parts(self):
-        self.align_and_damp(['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv', 'w'],
-                            ['indx_in_cell', 'Ex', 'Ey', 'Ez',
-                             'Bx', 'By', 'Bz'])
+        if self.Args['Np'] == 0:
+            return
+
+        self.align_and_damp(comps_align=['x', 'y', 'z', 'px', 'py', 'pz',
+                                         'g_inv', 'w'])
 
     def _process_configs(self, configs_in):
         self.Args = configs_in
@@ -64,17 +50,45 @@ class Particles(ParticleMethodsCL):
         if 'dt' not in self.Args:
             self.Args['dt'] = 1.
 
-        if 'q' not in self.Args:
-            self.Args['q'] = 1.
+        if 'charge' not in self.Args:
+            self.Args['charge'] = -1.
 
-        self.Args['dt_2'] = 0.5*self.Args['dt']
-        self.Args['dt_inv'] = 1.0/self.Args['dt']
+        if 'mass' not in self.Args:
+            self.Args['mass'] = 1.
 
-    def _send_grid_to_dev(self):
-        self.DataDev = {}
+        if 'dens' not in self.Args:
+            self.Args['dens'] = 1.
 
-        for arg in ['Np', ]:
-            self.DataDev[arg] = self.dev_arr(val=self.Args[arg], dtype=uint32)
+        dt, q_s, m_s, n_s, dx, dr = [self.Args[arg] for arg in ['dt',
+            'charge', 'mass', 'dens', 'dx', 'dr']]
 
-        for arg in ['dt_2', 'dt_inv']:
-            self.DataDev[arg] = self.dev_arr(val=self.Args[arg], dtype=double)
+        self.Args['dt_2'] = 0.5 * dt
+
+        if 'Nppc' in self.Args:
+            self.Args['Nppc'] = np.array(self.Args['Nppc'],dtype=np.uint32)
+            Num_ppc = np.prod(self.Args['Nppc'])
+            self.Args['w0'] = 2 * np.pi * dx * dr * n_s / Num_ppc
+            self.Args['ddx'] = dx / self.Args['Nppc'][0]
+        else:
+            self.Args['ddx'] = 1.
+
+        self.Args['FactorPush'] = 2 * np.pi * dt * q_s / m_s
+
+        self.Args['right_lim'] = 0.0
+
+        self.flag_sorted = False
+
+        self.Args['dont_send'] = ['InjectorSource','charge','mass',
+                                  'dens','Immobile']
+        self.Args['dont_keep'] = []
+
+    def _init_data_on_dev(self):
+
+        args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w','g_inv']
+        for arg in args_strs:
+            self.DataDev[arg] = self.dev_arr(shape=0,dtype=np.double)
+
+        for arg in ['cell_offset', 'indx_in_cell', 'sort_indx']:
+            allocator = ImmediateAllocator(self.comm.queue)
+            self.DataDev[arg + '_mp'] = MemoryPool(allocator)
+

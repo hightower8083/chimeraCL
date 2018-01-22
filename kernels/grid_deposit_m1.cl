@@ -1,10 +1,7 @@
 /// this is a source of grid kernels for chimeraCL project
 
-// #define PYOPENCL_DEFINE_CDOUBLE
-// #include <pyopencl-complex.h>
-
 // Depose particles "weights" onto 2D grid via linear projection,
-// using groups of 4 cells and barrierd steps for each cell
+// using groups of 4 cells and barriered steps for each cell
 // in a group by calling kernel with different offsets: (0,1,2,3)
 // _______________________
 //|     |     |     |     |
@@ -28,6 +25,7 @@ __kernel void depose_scalar(
   __global double *z,
   __global double *w,
   __global uint *indx_offset,
+             char charge,
   __constant uint *Nx,
   __constant double *xmin,
   __constant double *dx_inv,
@@ -39,10 +37,10 @@ __kernel void depose_scalar(
   __global double2 *scl_m1)
 {
   // running kernels over the 4cells
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < *NxNr_4)
    {
-    // get cell number and period of 4cell-grid
+    // get numbers of cells and period of 4cell-grid
     uint Nx_grid = *Nx;
     uint Nx_cell = Nx_grid-1;
     uint Nx_2 = Nx_grid/2;
@@ -110,7 +108,7 @@ if (ip_start != ip_end){
       xp = x[ip_srtd];
       yp = y[ip_srtd];
       zp = z[ip_srtd];
-      wp = w[ip_srtd];
+      wp = w[ip_srtd]*charge;
 
       rp = sqrt(yp*yp + zp*zp);
 
@@ -182,6 +180,7 @@ __kernel void depose_vector(
   __global double *g_inv,
   __global double *w,
   __global uint *indx_offset,
+           char charge,
   __constant uint *Nx,
   __constant double *xmin,
   __constant double *dx_inv,
@@ -197,7 +196,7 @@ __kernel void depose_vector(
   __global double2 *vec_z_m1)
 {
   // running kernels over the 4cells
-  uint i_cell = get_global_id(0);
+  uint i_cell = (uint) get_global_id(0);
   if (i_cell < *NxNr_4)
    {
     // get cell number and period of 4cell-grid
@@ -274,7 +273,7 @@ if (ip_start != ip_end){
       jp[0] = ux[ip_srtd];
       jp[1] = uy[ip_srtd];
       jp[2] = uz[ip_srtd];
-      wp = w[ip_srtd]*g_inv[ip_srtd];
+      wp = w[ip_srtd] * g_inv[ip_srtd] * charge;
 
       rp = sqrt(yp*yp + zp*zp);
 
@@ -327,14 +326,19 @@ if (ip_start != ip_end){
 }}
 }
 
-// Linear projection of a scalar onto 2D grid
-__kernel void project_scalar(
-  __global uint *sorting_indx,
-  __global double *scl_proj,
+// Gather linearly fields on the particles and advance their momenta
+__kernel void gather_and_push(
   __global double *x,
   __global double *y,
   __global double *z,
+  __global double *px,
+  __global double *py,
+  __global double *pz,
+  __global double *g_inv,
+  __global uint *sorting_indx,
   __global uint *indx_offset,
+  __constant double *dt,
+             uint Np,
   __constant uint *Nx,
   __constant double *xmin,
   __constant double *dx_inv,
@@ -342,256 +346,164 @@ __kernel void project_scalar(
   __constant double *rmin,
   __constant double *dr_inv,
   __constant uint *Nxm1Nrm1,
-  __global double *scl_m0,
-  __global double2 *scl_m1)
+  __global double *ex_m0,
+  __global double *ey_m0,
+  __global double *ez_m0,
+  __global double *bx_m0,
+  __global double *by_m0,
+  __global double *bz_m0,
+  __global double2 *ex_m1,
+  __global double2 *ey_m1,
+  __global double2 *ez_m1,
+  __global double2 *bx_m1,
+  __global double2 *by_m1,
+  __global double2 *bz_m1)
 {
-  // running kernels over the cells
-  uint i_cell = get_global_id(0);
-  if (i_cell < *Nxm1Nrm1)
+ // running kernels over the 4cells
+ uint ip  = (uint) get_global_id(0);
+ if (ip<Np)
+  {
+   uint ip_srtd = sorting_indx[ip];
+   if (ip_srtd<Np)
    {
+
     // get cell number and period of grid
-    uint Nx_grid = *Nx;
-    uint Nx_cell = Nx_grid-1;
+    int Nx_grid = (int) *Nx;
+    int Nx_cell = Nx_grid - 1;
+    int Nr_cell = (int) *Nr-1;
 
-    // get indicies of cell
-    uint ir = i_cell/Nx_cell;
-    uint ix = i_cell - ir*Nx_cell;
+    double xmin_loc = *xmin;
+    double rmin_loc = *rmin;
 
-    // get 1D indicies of the selected
-    // cell and grid node on the global grid
-    uint i_cell_glob = ix + ir*Nx_cell;
-    uint i_grid_glob = ix + ir*Nx_grid;
+    double xp = x[ip_srtd];
+    double yp = y[ip_srtd];
+    double zp = z[ip_srtd];
 
-    // get particles indicies in the selected cell
-    uint ip_start = indx_offset[i_cell_glob];
-    uint ip_end = indx_offset[i_cell_glob+1];
+    double u_p[3] = {px[ip_srtd], py[ip_srtd], pz[ip_srtd]};
 
-    // skip empty cells
-    if (ip_start == ip_end) {return;}
+    double dt_2 = 0.5*(*dt);
 
-    // allocate few integer counters
-    uint i,j,i_dep;
+    double rp = sqrt(yp*yp + zp*zp);
 
-    // allocate privite cell array for the deposition
-    double scl_cell_m0[2][2];
-    double scl_cell_m1[2][2][2];
+    double rp_inv = 1./rp;
+    double dr_inv_loc = *dr_inv;
+    double dx_inv_loc = *dx_inv;
 
-    for (i=0;i<2;i++){
-      for (j=0;j<2;j++){
-        i_dep = i_grid_glob + j + Nx_grid*i;
-        scl_cell_m0[i][j] = scl_m0[i_dep];
-        scl_cell_m1[i][j][0] = (double) scl_m1[i_dep].s0;
-        scl_cell_m1[i][j][1] = (double) scl_m1[i_dep].s1;
-        }}
+    int ix = (int) floor( (xp-xmin_loc) * dx_inv_loc );
+    int ir = (int) floor( (rp-rmin_loc) * dr_inv_loc );
+    uint i_cell = ix + ir*Nx_cell;
+    uint i_grid = ix + ir*Nx_grid;
+
+    double sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
+    double sX0 = 1.0 - sX1;
+    double sR1 = ( rp - rmin_loc )*dr_inv_loc - ir;
+    double sR0 = 1.0 - sR1;
 
     // allocate privitely some reused variables
-    double sX0, sX1, sR0, sR1;
     double C_cell[2][2];
     double exp_m1[2];
 
-    double xp, yp, zp, rp, scl_proj_p, rp_inv;
-    double rmin_loc = *rmin;
-    double dr_inv_loc = *dr_inv;
-    double xmin_loc = *xmin;
-    double dx_inv_loc = *dx_inv;
-    uint ip_srtd;
+    exp_m1[0] = yp*rp_inv;
+    exp_m1[1] = -zp*rp_inv;
 
-    // run over the particles for linear deposition
-    for (uint ip=ip_start; ip<ip_end; ip++)
-     {
-      ip_srtd = sorting_indx[ip];
-      xp = x[ip_srtd];
-      yp = y[ip_srtd];
-      zp = z[ip_srtd];
+    C_cell[0][0] = sR0*sX0;
+    C_cell[0][1] = sR0*sX1;
+    C_cell[1][0] = sR1*sX0;
+    C_cell[1][1] = sR1*sX1;
 
-      rp = sqrt(yp*yp + zp*zp);
+    uint i,j,k,i_loc;
 
-      rp_inv = 1./rp;
-      exp_m1[0] = yp*rp_inv;
-      exp_m1[1] = -zp*rp_inv;
+    // allocate privite cell array for the deposition
+    // NB: multiplictaion of m1 by 2 accounts for Hermit symmetry
+    double e_cell_m0[3][2][2] ;
+    double b_cell_m0[3][2][2] ;
+    double e_cell_m1[3][2][2][2] ;
+    double b_cell_m1[3][2][2][2] ;
 
-      sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
-      sX0 = 1.0 - sX1;
-      sR1 = ( rp - rmin_loc )*dr_inv_loc - ir;
-      sR0 = 1.0 - sR1;
+    for (i=0;i<2;i++){
+      for (j=0;j<2;j++){
+        i_loc = i_grid + j + Nx_grid*i;
+        e_cell_m0[0][i][j] = ex_m0[i_loc];
+        e_cell_m0[1][i][j] = ey_m0[i_loc];
+        e_cell_m0[2][i][j] = ez_m0[i_loc];
 
-      C_cell[0][0] = sR0*sX0;
-      C_cell[0][1] = sR0*sX1;
-      C_cell[1][0] = sR1*sX0;
-      C_cell[1][1] = sR1*sX1;
+        b_cell_m0[0][i][j] = bx_m0[i_loc];
+        b_cell_m0[1][i][j] = by_m0[i_loc];
+        b_cell_m0[2][i][j] = bz_m0[i_loc];
 
-      scl_proj_p = 0;
+        e_cell_m1[0][i][j][0] = 2 * ((double) ex_m1[i_loc].s0);
+        e_cell_m1[0][i][j][1] = 2 * ((double) ex_m1[i_loc].s1);
 
+        e_cell_m1[1][i][j][0] = 2 * ((double) ey_m1[i_loc].s0);
+        e_cell_m1[1][i][j][1] = 2 * ((double) ey_m1[i_loc].s1);
+
+        e_cell_m1[2][i][j][0] = 2 * ((double) ez_m1[i_loc].s0);
+        e_cell_m1[2][i][j][1] = 2 * ((double) ez_m1[i_loc].s1);
+
+        b_cell_m1[0][i][j][0] = 2 * ((double) bx_m1[i_loc].s0);
+        b_cell_m1[0][i][j][1] = 2 * ((double) bx_m1[i_loc].s1);
+
+        b_cell_m1[1][i][j][0] = 2 * ((double) by_m1[i_loc].s0);
+        b_cell_m1[1][i][j][1] = 2 * ((double) by_m1[i_loc].s1);
+
+        b_cell_m1[2][i][j][0] = 2 * ((double) bz_m1[i_loc].s0);
+        b_cell_m1[2][i][j][1] = 2 * ((double) bz_m1[i_loc].s1);
+        }}
+
+    double e_p[3], b_p[3];
+    for (k=0;k<3;k++){
+      e_p[k] = 0;
+      b_p[k] = 0;
+      }
+
+    for (k=0;k<3;k++){
       for (i=0;i<2;i++){
         for (j=0;j<2;j++){
-          scl_proj_p += C_cell[i][j]*scl_cell_m0[i][j];
-          scl_proj_p += C_cell[i][j]*scl_cell_m1[i][j][0]*exp_m1[0];
-          scl_proj_p -= C_cell[i][j]*scl_cell_m1[i][j][1]*exp_m1[1];
-        }}
+          e_p[k] += C_cell[i][j]*e_cell_m0[k][i][j];
+          b_p[k] += C_cell[i][j]*b_cell_m0[k][i][j];
 
-      scl_proj[ip_srtd] += scl_proj_p ;
-     }
-   }
-}
+          e_p[k] += C_cell[i][j]*e_cell_m1[k][i][j][0]*exp_m1[0];
+          e_p[k] -= C_cell[i][j]*e_cell_m1[k][i][j][1]*exp_m1[1];
+          b_p[k] += C_cell[i][j]*b_cell_m1[k][i][j][0]*exp_m1[0];
+          b_p[k] -= C_cell[i][j]*b_cell_m1[k][i][j][1]*exp_m1[1];
+          }}}
 
-// Linear projection of a weighted vector of particles onto 2D grid
-__kernel void project_vec6(
-  __global uint *sorting_indx,
-  __global double *vec_x_1_proj,
-  __global double *vec_y_1_proj,
-  __global double *vec_z_1_proj,
-  __global double *vec_x_2_proj,
-  __global double *vec_y_2_proj,
-  __global double *vec_z_2_proj,
-  __global double *x,
-  __global double *y,
-  __global double *z,
-  __global uint *indx_offset,
-  __constant uint *Nx,
-  __constant double *xmin,
-  __constant double *dx_inv,
-  __constant uint *Nr,
-  __constant double *rmin,
-  __constant double *dr_inv,
-  __constant uint *Nxm1Nrm1,
-  __global double *vec_x_1_m0,
-  __global double *vec_y_1_m0,
-  __global double *vec_z_1_m0,
-  __global double *vec_x_2_m0,
-  __global double *vec_y_2_m0,
-  __global double *vec_z_2_m0,
-  __global double2 *vec_x_1_m1,
-  __global double2 *vec_y_1_m1,
-  __global double2 *vec_z_1_m1,
-  __global double2 *vec_x_2_m1,
-  __global double2 *vec_y_2_m1,
-  __global double2 *vec_z_2_m1)
-{
-  // running kernels over the 4cells
-  uint i_cell = get_global_id(0);
-  if (i_cell < *Nxm1Nrm1)
-   {
-    // get cell number and period of grid
-    uint Nx_grid = *Nx;
-    uint Nx_cell = Nx_grid - 1;
+    double um[3], up[3], u0[3], t[3], s[3];
 
-    // get indicies of cell
-    uint ir = i_cell/Nx_cell;
-    uint ix = i_cell - ir*Nx_cell;
+    for(k=0;k<3;k++){
+      um[k] = u_p[k] + dt_2*e_p[k];
+    }
 
-    // get 1D indicies of the selected
-    // cell and grid node on the global grid
-    uint i_cell_glob = ix + ir*Nx_cell;
-    uint i_grid_glob = ix + ir*Nx_grid;
+    double g_p_inv = 1. / sqrt(1. + um[0]*um[0] + um[1]*um[1] + um[2]*um[2]);
 
-    // get particles indicies in the selected cell
-    uint ip_start = indx_offset[i_cell_glob];
-    uint ip_end = indx_offset[i_cell_glob+1];
-
-    // skip empty cells
-    if (ip_start == ip_end) {return;}
-
-    // allocate few integer counters
-    uint i,j,k,i_dep;
-
-    // allocate privite cell array for the deposition
-    double vec_1_cell_m0[3][2][2] ;
-    double vec_2_cell_m0[3][2][2] ;
-    double vec_1_cell_m1[3][2][2][2] ;
-    double vec_2_cell_m1[3][2][2][2] ;
-
-    for (i=0;i<2;i++){
-      for (j=0;j<2;j++){
-        i_dep = i_grid_glob + j + Nx_grid*i;
-        vec_1_cell_m0[0][i][j] = vec_x_1_m0[i_dep];
-        vec_1_cell_m0[1][i][j] = vec_y_1_m0[i_dep];
-        vec_1_cell_m0[2][i][j] = vec_z_1_m0[i_dep];
-
-        vec_2_cell_m0[0][i][j] = vec_x_2_m0[i_dep];
-        vec_2_cell_m0[1][i][j] = vec_y_2_m0[i_dep];
-        vec_2_cell_m0[2][i][j] = vec_z_2_m0[i_dep];
-
-        vec_1_cell_m1[0][i][j][0] = (double) vec_x_1_m1[i_dep].s0;
-        vec_1_cell_m1[0][i][j][1] = (double) vec_x_1_m1[i_dep].s1;
-
-        vec_1_cell_m1[1][i][j][0] = (double) vec_y_1_m1[i_dep].s0;
-        vec_1_cell_m1[1][i][j][1] = (double) vec_y_1_m1[i_dep].s1;
-
-        vec_1_cell_m1[2][i][j][0] = (double) vec_z_1_m1[i_dep].s0;
-        vec_1_cell_m1[2][i][j][1] = (double) vec_z_1_m1[i_dep].s1;
-
-        vec_2_cell_m1[0][i][j][0] = (double) vec_x_2_m1[i_dep].s0;
-        vec_2_cell_m1[0][i][j][1] = (double) vec_x_2_m1[i_dep].s1;
-
-        vec_2_cell_m1[1][i][j][0] = (double) vec_y_2_m1[i_dep].s0;
-        vec_2_cell_m1[1][i][j][1] = (double) vec_y_2_m1[i_dep].s1;
-
-        vec_2_cell_m1[2][i][j][0] = (double) vec_z_2_m1[i_dep].s0;
-        vec_2_cell_m1[2][i][j][1] = (double) vec_z_2_m1[i_dep].s1;
-        }}
-
-    // allocate privitely some reused variables
-    double sX0, sX1, sR0, sR1;
-    double C_cell[2][2];
-    double exp_m1[2];
-
-    double vec_1_p[3];
-    double vec_2_p[3];
-
-    double xp, yp, zp, rp, rp_inv;
-    double rmin_loc = *rmin;
-    double dr_inv_loc = *dr_inv;
-    double xmin_loc = *xmin;
-    double dx_inv_loc = *dx_inv;
-    uint ip_srtd;
-
-    // run over the particles for linear deposition
-    for (uint ip=ip_start; ip<ip_end; ip++){
-      ip_srtd = sorting_indx[ip];
-      xp = x[ip_srtd];
-      yp = y[ip_srtd];
-      zp = z[ip_srtd];
-
-      rp = sqrt(yp*yp + zp*zp);
-
-      rp_inv = 1./rp;
-      exp_m1[0] = yp*rp_inv;
-      exp_m1[1] = -zp*rp_inv;
-
-      sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
-      sX0 = 1.0 - sX1;
-      sR1 = ( rp - rmin_loc )*dr_inv_loc - ir;
-      sR0 = 1.0 - sR1;
-
-      C_cell[0][0] = sR0*sX0;
-      C_cell[0][1] = sR0*sX1;
-      C_cell[1][0] = sR1*sX0;
-      C_cell[1][1] = sR1*sX1;
-
-      for (k=0;k<3;k++){
-        vec_1_p[k] = 0;
-        vec_2_p[k] = 0;
-        }
-
-      for (k=0;k<3;k++){
-        for (i=0;i<2;i++){
-          for (j=0;j<2;j++){
-            vec_1_p[k] += C_cell[i][j]*vec_1_cell_m0[k][i][j];
-            vec_2_p[k] += C_cell[i][j]*vec_2_cell_m0[k][i][j];
-
-            vec_1_p[k] += C_cell[i][j]*vec_1_cell_m1[k][i][j][0]*exp_m1[0];
-            vec_1_p[k] -= C_cell[i][j]*vec_1_cell_m1[k][i][j][1]*exp_m1[1];
-            vec_2_p[k] += C_cell[i][j]*vec_2_cell_m1[k][i][j][0]*exp_m1[0];
-            vec_2_p[k] -= C_cell[i][j]*vec_2_cell_m1[k][i][j][1]*exp_m1[1];
-            }}}
-
-      vec_x_1_proj[ip_srtd] += vec_1_p[0] ;
-      vec_y_1_proj[ip_srtd] += vec_1_p[1] ;
-      vec_z_1_proj[ip_srtd] += vec_1_p[2] ;
-
-      vec_x_2_proj[ip_srtd] += vec_2_p[0] ;
-      vec_y_2_proj[ip_srtd] += vec_2_p[1] ;
-      vec_z_2_proj[ip_srtd] += vec_2_p[2] ;
+    for(k=0;k<3;k++){
+      t[k] = dt_2 * b_p[k] * g_p_inv;
       }
+
+    double t2p1_m1_05 = 2. / (1. + t[0]*t[0] + t[1]*t[1] + t[2]*t[2]) ;
+
+    for(k=0;k<3;k++){
+      s[k] = t[k] * t2p1_m1_05;
+      }
+
+    u0[0] = um[0] + um[1]*t[2] - um[2]*t[1];
+    u0[1] = um[1] - um[0]*t[2] + um[2]*t[0];
+    u0[2] = um[2] + um[0]*t[1] - um[1]*t[0];
+
+    up[0] = um[0] +  u0[1]*s[2] - u0[2]*s[1];
+    up[1] = um[1] -  u0[0]*s[2] + u0[2]*s[0];
+    up[2] = um[2] +  u0[0]*s[1] - u0[1]*s[0];
+
+    for(int k=0;k<3;k++) {
+      u_p[k] = up[k] + dt_2*e_p[k];
+      }
+
+    g_p_inv = 1. / sqrt(1. + u_p[0]*u_p[0] + u_p[1]*u_p[1] + u_p[2]*u_p[2]);
+
+    px[ip_srtd] = u_p[0];
+    py[ip_srtd] = u_p[1];
+    pz[ip_srtd] = u_p[2];
+    g_inv[ip_srtd] = g_p_inv;
+   }
   }
 }
