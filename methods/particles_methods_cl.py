@@ -66,7 +66,6 @@ class ParticleMethodsCL(GenericMethodsCL):
         self.flag_sorted = False
 
     def make_new_domain(self, parts_in, density_profiles=None):
-        args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w']
 
         xmin, xmax, rmin, rmax = \
           [parts_in[arg] for arg in ['Xmin', 'Xmax', 'Rmin', 'Rmax']]
@@ -80,7 +79,8 @@ class ParticleMethodsCL(GenericMethodsCL):
         Ncells_loc = (Nx_loc-1)*(Nr_loc-1)
         Np = int(Ncells_loc*np.prod(self.Args['Nppc']))
 
-        for arg in args_strs:
+        gn_strs = ['x', 'y', 'z', 'w']
+        for arg in gn_strs:
             self.DataDev[arg+'_new'] = self.dev_arr(shape=Np,
                 dtype=np.double)
 
@@ -88,7 +88,6 @@ class ParticleMethodsCL(GenericMethodsCL):
             dtype=np.double)
         self._fill_arr_rand(theta_variator, xmin=0, xmax=2*np.pi)
 
-        gn_strs = ['x', 'y', 'z', 'w']
         gn_args = [self.DataDev[arg+'_new'].data for arg in gn_strs]
         gn_args += [theta_variator.data, ]
         gn_args += [Xgrid_loc.data, Rgrid_loc.data,
@@ -114,19 +113,31 @@ class ParticleMethodsCL(GenericMethodsCL):
                 self.dens_profile(x_prf, f_prf, xmin, xmax, coord=coord, weight='w_new')
 
         for arg in ['px', 'py', 'pz']:
-            if ('d'+arg in parts_in):
-                self._fill_arr_randn(self.DataDev[arg+'_new'],
-                                    mu=parts_in[arg+'_c'],
-                                    sigma=parts_in['d'+arg])
+
+            if 'd'+arg not in parts_in and arg+'_c' not in parts_in:
+                self.DataDev[arg+'_new'] = self.dev_arr(shape=Np, val=0,
+                                                        dtype=np.double)
+                parts_in[arg+'_c'] = 0
+                parts_in['d'+arg] = 0
             else:
+                self.DataDev[arg+'_new'] = self.dev_arr(shape=Np,
+                                                        dtype=np.double)
+
                 if arg+'_c' not in parts_in:
                     parts_in[arg+'_c'] = 0
-                self.DataDev[arg+'_new'].fill(parts_in[arg+'_c'])
 
-        if (parts_in['px_c'] != 0) and (parts_in['dpx'] != 0) and \
-          (parts_in['py_c'] != 0) and (parts_in['dpy'] != 0) and \
-          (parts_in['pz_c'] != 0) and (parts_in['dpz'] != 0):
+                if 'd'+arg in parts_in:
+                    self._fill_arr_randn(self.DataDev[arg+'_new'],
+                                         mu=parts_in[arg+'_c'],
+                                         sigma=parts_in['d'+arg])
+                else:
+                    parts_in['d'+arg] = 0
+                    self.DataDev[arg+'_new'].fill(parts_in[arg+'_c'])
 
+        momnt = np.sum([parts_in[key]**2 for key in ('px_c','py_c','pz_c',
+                                                     'dpx','dpy','dpz',)])
+
+        if (momnt != 0):
             self.DataDev['g_inv_new'] = 1./sqrt(
                 1 + self.DataDev['px_new']*self.DataDev['px_new']
                 + self.DataDev['py_new']*self.DataDev['py_new']
