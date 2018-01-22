@@ -276,8 +276,6 @@ if (ip_start != ip_end){
 }}
 }
 
-
-
 // Linear projection of a weighted vector of particles onto 2D grid
 __kernel void gather_and_push(
   __global double *x,
@@ -347,9 +345,6 @@ __kernel void gather_and_push(
 
     // allocate privitely some reused variables
     double C_cell[2][2];
-
-    exp_m1[0] = yp*rp_inv;
-    exp_m1[1] = -zp*rp_inv;
 
     C_cell[0][0] = sR0*sX0;
     C_cell[0][1] = sR0*sX1;
