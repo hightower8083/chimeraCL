@@ -31,7 +31,7 @@ class Diagnostics:
             self.Args['VectorFields'] = []
 
         if 'Species' not in self.Args:
-            self.Args['Species'] = []
+            self.Args['Species'] = {'Components':[],}
 
 
     def make_record(self, it):
@@ -62,8 +62,25 @@ class Diagnostics:
             part = self.species[species_index]
             specie_name = 'species_' + str(species_index) + '/'
             h5_path = self.base_str + self.parts_str + specie_name
-            for part_comp in self.Args['Species']:
-                self.record[h5_path+part_comp] = part.DataDev[part_comp].get()
+            if 'Selections' in self.Args['Species']:
+                select_mask = np.ones(part.Args['Np'], dtype=np.uint8)
+                for select in  self.Args['Species']['Selections']:
+                    comp_select, vmin, vmax = select
+                    comp_val = part.DataDev[comp_select].get()
+                    if vmin is not None:
+                        select_mask *= (comp_val>vmin).astype(np.uint8)
+                    if vmax is not None:
+                        select_mask *= (comp_val<vmax).astype(np.uint8)
+                indx = np.nonzero(select_mask)
+            else:
+                indx = None
+
+            for part_comp in self.Args['Species']['Components']:
+                comp_vals = part.DataDev[part_comp].get()
+                if indx is None:
+                    self.record[h5_path+part_comp] = comp_vals
+                else:
+                    self.record[h5_path+part_comp] = comp_vals[indx]
 
     def add_generic_info(self):
         h5_path = self.base_str + self.info_str

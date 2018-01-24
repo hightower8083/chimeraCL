@@ -45,7 +45,6 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._profile_by_interpolant_knl = prg.profile_by_interpolant
 
     def add_new_particles(self, source=None):
-        args_strs = ['x', 'y', 'z', 'px', 'py', 'pz', 'w', 'g_inv']
 
         if source is None:
             DataSrc = self.DataDev
@@ -55,6 +54,12 @@ class ParticleMethodsCL(GenericMethodsCL):
         old_Np = self.DataDev['x'].size
         new_Np = DataSrc['x_new'].size
         full_Np = old_Np + new_Np
+
+        if 'Immobile' not in self.Args.keys():
+            args_strs = ['x', 'y', 'z', 'px', 'py', 'pz', 'w', 'g_inv']
+        else:
+            args_strs = ['x', 'y', 'z','w']
+
         for arg in args_strs:
             buff = self.dev_arr(dtype=self.DataDev[arg].dtype,
                                 shape=full_Np)
@@ -112,39 +117,40 @@ class ParticleMethodsCL(GenericMethodsCL):
                 f_prf = profile['values']
                 self.dens_profile(x_prf, f_prf, xmin, xmax, coord=coord, weight='w_new')
 
-        for arg in ['px', 'py', 'pz']:
+        if 'Immobile' not in self.Args.keys():
 
-            if 'd'+arg not in parts_in and arg+'_c' not in parts_in:
-                self.DataDev[arg+'_new'] = self.dev_arr(shape=Np, val=0,
-                                                        dtype=np.double)
-                parts_in[arg+'_c'] = 0
-                parts_in['d'+arg] = 0
-            else:
-                self.DataDev[arg+'_new'] = self.dev_arr(shape=Np,
-                                                        dtype=np.double)
+            for arg in ['px', 'py', 'pz']:
 
-                if arg+'_c' not in parts_in:
+                if 'd'+arg not in parts_in and arg+'_c' not in parts_in:
+                    self.DataDev[arg+'_new'] = self.dev_arr(shape=Np, val=0,
+                                                            dtype=np.double)
                     parts_in[arg+'_c'] = 0
-
-                if 'd'+arg in parts_in:
-                    self._fill_arr_randn(self.DataDev[arg+'_new'],
-                                         mu=parts_in[arg+'_c'],
-                                         sigma=parts_in['d'+arg])
-                else:
                     parts_in['d'+arg] = 0
-                    self.DataDev[arg+'_new'].fill(parts_in[arg+'_c'])
+                else:
+                    self.DataDev[arg+'_new'] = self.dev_arr(shape=Np,
+                                                            dtype=np.double)
 
-        momnt = np.sum([parts_in[key]**2 for key in ('px_c','py_c','pz_c',
-                                                     'dpx','dpy','dpz',)])
+                    if arg+'_c' not in parts_in:
+                        parts_in[arg+'_c'] = 0
 
-        if (momnt != 0):
-            self.DataDev['g_inv_new'] = 1./sqrt(
-                1 + self.DataDev['px_new']*self.DataDev['px_new']
-                + self.DataDev['py_new']*self.DataDev['py_new']
-                + self.DataDev['pz_new']*self.DataDev['pz_new'])
-        else:
-            self.DataDev['g_inv_new'] = self.dev_arr(shape=Np,val=1.0,
-                dtype=np.double)
+                    if 'd'+arg in parts_in:
+                        self._fill_arr_randn(self.DataDev[arg+'_new'],
+                                             mu=parts_in[arg+'_c'],
+                                             sigma=parts_in['d'+arg])
+                    else:
+                        parts_in['d'+arg] = 0
+                        self.DataDev[arg+'_new'].fill(parts_in[arg+'_c'])
+
+            momnt = np.sum([parts_in[key]**2 for key in ('px_c','py_c','pz_c',
+                                                         'dpx','dpy','dpz',)])
+            if (momnt != 0):
+                self.DataDev['g_inv_new'] = 1./sqrt(
+                    1 + self.DataDev['px_new']*self.DataDev['px_new']
+                    + self.DataDev['py_new']*self.DataDev['py_new']
+                    + self.DataDev['pz_new']*self.DataDev['pz_new'])
+            else:
+                self.DataDev['g_inv_new'] = self.dev_arr(shape=Np,val=1.0,
+                    dtype=np.double)
 
     def make_new_beam(self, parts_in):
         Np = parts_in['Np']
