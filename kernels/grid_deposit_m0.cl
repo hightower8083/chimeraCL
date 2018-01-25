@@ -62,7 +62,7 @@ if (i_cell < *NxNr_4)
     else if (cell_offset==3)
       {ix += 1;ir += 1;}
 
-if (ix<Nx_cell && ir<Nr_cell ){
+if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 && ir>=0 ){
 
     // get 1D indicies of the selected
     // cell and grid node on the global grid
@@ -195,7 +195,7 @@ __kernel void depose_vector(
     else if (cell_offset==3)
       {ix += 1;ir += 1;}
 
-if (ix<Nx_cell && ir<Nr_cell ){
+if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 && ir>=0 ){
     // get 1D indicies of the selected
     // cell and grid node on the global grid
     uint i_cell_glob = ix + ir*Nx_cell;
@@ -335,6 +335,9 @@ __kernel void gather_and_push(
 
     int ix = (int) floor( (xp-xmin_loc) * dx_inv_loc );
     int ir = (int) floor( (rp-rmin_loc) * dr_inv_loc );
+
+if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 && ir>=0 ){
+
     uint i_cell = ix + ir*Nx_cell;
     uint i_grid = ix + ir*Nx_grid;
 
@@ -422,4 +425,5 @@ __kernel void gather_and_push(
     g_inv[ip_srtd] = g_p_inv;
    }
   }
+}
 }

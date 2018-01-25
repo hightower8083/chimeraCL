@@ -44,8 +44,7 @@ class Frame():
             inject_domain['Xmax'] = inject_domain['Xmin'] + x_shift
             inject_domain['Rmin'] = grid.Args['Rmin']*(grid.Args['Rmin']>0)
             inject_domain['Rmax'] = grid.Args['Rmax']
-
-#            print(specie.Args['right_lim'], inject_domain)
+            print(inject_domain['Xmax']-inject_domain['Xmin'])
 
             specie.make_new_domain(inject_domain,
                 density_profiles=self.Args['DensityProfiles'])
