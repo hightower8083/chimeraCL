@@ -115,11 +115,14 @@ __kernel void index_and_sum_in_cell(
     if (ix > 0 && ix < Nx_loc-1 && ir < Nr_loc-1 && ir >= 0)
      {
       indx_in_cell[ip] = ix + ir * Nx_loc;
-      atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);
+      atomic_add(&sum_in_cell[indx_in_cell[ip]], 1U);
+//      atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);
      }
     else
      {
-      indx_in_cell[ip] = (Nr_loc+1) * (Nx_loc+1) + 1;
+      indx_in_cell[ip] = Nr_loc*Nx_loc ;
+      atomic_add(&sum_in_cell[indx_in_cell[ip]], 1U);
+//      atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);
      }
   }
 }
@@ -181,3 +184,20 @@ __kernel void data_align_int(
    }
 }
 
+
+__kernel void sort(
+  __global uint *cell_offset,
+  __global uint *indx_in_cell,
+  __global uint *new_sum_in_cell,
+  __global uint *sorted_indx,
+                  uint num_p)
+{
+  uint ip = (uint) get_global_id(0);
+  if (ip < num_p)
+   {
+    uint i_cell = indx_in_cell[ip];
+    uint ip_offset_loc = atomic_add(&new_sum_in_cell[i_cell], 1U);
+    uint ip_sorted = cell_offset[i_cell] + ip_offset_loc;
+    sorted_indx[ip_sorted] = ip;
+   }
+}

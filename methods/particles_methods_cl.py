@@ -40,6 +40,9 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._data_align_dbl_knl = prg.data_align_dbl
         self._data_align_int_knl = prg.data_align_int
         self._index_and_sum_knl = prg.index_and_sum_in_cell
+
+        self._sort_knl = prg.sort
+
         self._push_xyz_knl = prg.push_xyz
         self._fill_grid_knl = prg.fill_grid
         self._profile_by_interpolant_knl = prg.profile_by_interpolant
@@ -115,7 +118,8 @@ class ParticleMethodsCL(GenericMethodsCL):
                 coord = profile['coord'] + '_new'
                 x_prf = profile['points']
                 f_prf = profile['values']
-                self.dens_profile(x_prf, f_prf, xmin, xmax, coord=coord, weight='w_new')
+                self.dens_profile(x_prf, f_prf, xmin, xmax,
+                                  coord=coord, weight='w_new')
 
         if 'Immobile' not in self.Args.keys():
 
@@ -209,8 +213,9 @@ class ParticleMethodsCL(GenericMethodsCL):
                                          f_loc.data, dxm1_loc.data,
                                          np.uint32(Nx_loc)).wait()
 
-    def reset_num_parts(self):
-        Np = self.DataDev['x'].size
+    def reset_num_parts(self, Np=None):
+        if Np is None:
+            Np = self.DataDev['x'].size
         self.DataDev['Np'].fill(Np)
         self.Args['Np'] = Np
 
@@ -240,7 +245,7 @@ class ParticleMethodsCL(GenericMethodsCL):
             shape=self.Args['Np'], allocator=self.DataDev['indx_in_cell_mp'])
 
         self.DataDev['cell_offset'] = self.dev_arr(val=0,
-            dtype=np.uint32, shape=grid.Args['Nxm1Nrm1'],
+            dtype=np.uint32, shape=grid.Args['Nxm1Nrm1']+1,
             allocator=self.DataDev['cell_offset_mp'])
 
         part_strs =  ['x', 'y', 'z', 'cell_offset', 'Np']
@@ -268,7 +273,6 @@ class ParticleMethodsCL(GenericMethodsCL):
                                    allocator=self.DataDev['indx_in_cell_mp'])
             evnt.wait()
 
-
         elif self.comm.sort_method == 'NumPy':
                 self.DataDev['sort_indx'] = \
                     self.DataDev['indx_in_cell'].get().argsort()
@@ -276,8 +280,47 @@ class ParticleMethodsCL(GenericMethodsCL):
                 self.DataDev['sort_indx'] = to_device(
                     self.queue, self.DataDev['sort_indx'])
 
+
+    def index_sort_tst(self, grid):
+        WGS, WGS_tot = self.get_wgs(self.Args['Np'])
+
+        self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
+            shape=self.Args['Np'], allocator=self.DataDev['indx_in_cell_mp'])
+
+        self.DataDev['cell_offset'] = self.dev_arr(val=0,
+            dtype=np.uint32, shape=grid.Args['Nxm1Nrm1']+1,
+            allocator=self.DataDev['cell_offset_mp'])
+
+        part_strs =  ['x', 'y', 'z', 'cell_offset', 'Np']
+        grid_strs =  ['Nx', 'Xmin', 'dx_inv',
+                      'Nr', 'Rmin', 'dr_inv']
+
+        args = [self.DataDev[arg].data for arg in part_strs] + \
+               [self.DataDev['indx_in_cell'].data, ] + \
+               [grid.DataDev[arg].data for arg in grid_strs]
+
+        self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
+
+        self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'],
+            allocator=self.DataDev['cell_offset_mp'])
+
+        self.DataDev['new_sum_in_cell'] = self.dev_arr(val=0,
+            dtype=np.uint32, shape=grid.Args['Nxm1Nrm1']+1,
+            allocator=self.DataDev['new_sum_in_cell_mp'])
+
+        self.DataDev['sort_indx'] = self.dev_arr(dtype=np.uint32,
+            shape=self.Args['Np'], allocator=self.DataDev['sort_indx_mp'])
+
+        WGS, WGS_tot = self.get_wgs(self.Args['Np'])
+        self._sort_knl(self.queue, (WGS_tot, ), (WGS, ),
+                       self.DataDev['cell_offset'].data,
+                       self.DataDev['indx_in_cell'].data,
+                       self.DataDev['new_sum_in_cell'].data,
+                       self.DataDev['sort_indx'].data,
+                       np.uint32(self.Args['Np'])).wait()
+
     def align_and_damp(self, comps_align):
-        num_staying = self.DataDev['cell_offset'][-1].get().item()
+        num_staying = self.DataDev['cell_offset'][-2].get().item()
 
         if num_staying == 0:
             for comp in comps_align + ['sort_indx',]:

@@ -23,7 +23,7 @@ class Particles(ParticleMethodsCL):
             self.flag_sorted = True
 
         if self.flag_sorted == False:
-            self.index_sort(grid)
+            self.index_sort_tst(grid)
             self.flag_sorted = True
 
     def add_particles(self, domain_in=None, beam_in=None):
@@ -95,7 +95,8 @@ class Particles(ParticleMethodsCL):
         for arg in args_strs:
             self.DataDev[arg] = self.dev_arr(shape=0,dtype=np.double)
 
-        for arg in ['cell_offset', 'indx_in_cell', 'sort_indx']:
+        for arg in ['cell_offset', 'indx_in_cell',
+                    'sort_indx', 'new_sum_in_cell']:
             allocator = ImmediateAllocator(self.comm.queue)
             self.DataDev[arg + '_mp'] = MemoryPool(allocator)
 

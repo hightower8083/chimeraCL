@@ -28,7 +28,8 @@ def timer_plot(Timer):
 
 
 class PIC_loop:
-    def __init__(self, solvers, species, frames, diags, timit=False):
+    def __init__(self, solvers=[], species=[],
+                 frames=[], diags=[], timit=False):
         self.solvers = solvers
         self.mainsolver = self.solvers[0]
         self.species = species

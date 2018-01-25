@@ -45,6 +45,8 @@ class Frame():
             inject_domain['Rmin'] = grid.Args['Rmin']*(grid.Args['Rmin']>0)
             inject_domain['Rmax'] = grid.Args['Rmax']
 
+#            print(specie.Args['right_lim'], inject_domain)
+
             specie.make_new_domain(inject_domain,
                 density_profiles=self.Args['DensityProfiles'])
 
@@ -55,5 +57,5 @@ class Frame():
 
             specie.sort_parts(grid=grid)
             specie.align_parts()
-            specie.Args['right_lim'] = specie.DataDev['x'][-1].get() \
+            specie.Args['right_lim'] = specie.DataDev['x'][-1].get().item() \
                                        + 0.5*specie.Args['ddx']
