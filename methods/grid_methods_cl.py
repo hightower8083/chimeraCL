@@ -169,7 +169,7 @@ class GridMethodsCL(GenericMethodsCL):
         part_str = ['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv',
                     'sort_indx','cell_offset', 'FactorPush']
 
-        Np_stay = parts.DataDev['cell_offset'][-1].get().item()
+        #Np_stay = parts.DataDev['cell_offset'][-1].get().item()
 
         grid_str = ['Nx', 'Xmin', 'dx_inv',
                     'Nr', 'Rmin', 'dr_inv',
@@ -184,9 +184,11 @@ class GridMethodsCL(GenericMethodsCL):
         args_parts = [parts.DataDev[arg].data for arg in part_str]
         args_grid = [self.DataDev[arg].data for arg in grid_str]
         args_fld = [self.DataDev[arg].data for arg in fld_str]
+        args_num_p = [np.uint32(parts.Args['Np']),
+                      np.uint32(parts.Args['Np_stay'])]
 
-        args = args_parts + [np.uint32(Np_stay),] + args_grid + args_fld
+        args = args_parts + args_num_p + args_grid + args_fld
 
-        WGS, WGS_tot = self.get_wgs(Np_stay)
+        WGS, WGS_tot = self.get_wgs(parts.Args['Np'])
         self._gather_and_push_knl(self.queue, (WGS_tot, ), (WGS, ),
                                   *args).wait()

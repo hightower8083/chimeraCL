@@ -23,7 +23,7 @@ class Particles(ParticleMethodsCL):
             self.flag_sorted = True
 
         if self.flag_sorted == False:
-            self.index_sort_tst(grid)
+            self.index_sort(grid)
             self.flag_sorted = True
 
     def add_particles(self, domain_in=None, beam_in=None):
@@ -50,6 +50,7 @@ class Particles(ParticleMethodsCL):
         self.Args = configs_in
 
         self.Args['Np'] = 0
+        self.Args['Np_stay'] = 0
 
         if 'dt' not in self.Args:
             self.Args['dt'] = 1.

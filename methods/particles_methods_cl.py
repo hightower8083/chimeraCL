@@ -213,12 +213,6 @@ class ParticleMethodsCL(GenericMethodsCL):
                                          f_loc.data, dxm1_loc.data,
                                          np.uint32(Nx_loc)).wait()
 
-    def reset_num_parts(self, Np=None):
-        if Np is None:
-            Np = self.DataDev['x'].size
-        self.DataDev['Np'].fill(Np)
-        self.Args['Np'] = Np
-
     def push_coords(self, mode='half'):
         if self.Args['Np']==0:
             return
@@ -261,48 +255,7 @@ class ParticleMethodsCL(GenericMethodsCL):
         self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'],
             allocator=self.DataDev['cell_offset_mp'])
 
-        if self.comm.sort_method == 'Radix':
-            indx_size = self.DataDev['indx_in_cell'].size
-            self.DataDev['sort_indx'] = arange(self.queue, 0, indx_size, 1,
-                dtype=np.uint32, allocator=self.DataDev['sort_indx_mp'])
-
-            (self.DataDev['indx_in_cell'], self.DataDev['sort_indx']), evnt = \
-                self._sort_rdx_knl(self.DataDev['indx_in_cell'],
-                                   self.DataDev['sort_indx'],
-                                   key_bits=len(bin(self.Args['Np'])),
-                                   allocator=self.DataDev['indx_in_cell_mp'])
-            evnt.wait()
-
-        elif self.comm.sort_method == 'NumPy':
-                self.DataDev['sort_indx'] = \
-                    self.DataDev['indx_in_cell'].get().argsort()
-
-                self.DataDev['sort_indx'] = to_device(
-                    self.queue, self.DataDev['sort_indx'])
-
-
-    def index_sort_tst(self, grid):
-        WGS, WGS_tot = self.get_wgs(self.Args['Np'])
-
-        self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
-            shape=self.Args['Np'], allocator=self.DataDev['indx_in_cell_mp'])
-
-        self.DataDev['cell_offset'] = self.dev_arr(val=0,
-            dtype=np.uint32, shape=grid.Args['Nxm1Nrm1']+1,
-            allocator=self.DataDev['cell_offset_mp'])
-
-        part_strs =  ['x', 'y', 'z', 'cell_offset', 'Np']
-        grid_strs =  ['Nx', 'Xmin', 'dx_inv',
-                      'Nr', 'Rmin', 'dr_inv']
-
-        args = [self.DataDev[arg].data for arg in part_strs] + \
-               [self.DataDev['indx_in_cell'].data, ] + \
-               [grid.DataDev[arg].data for arg in grid_strs]
-
-        self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
-
-        self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'],
-            allocator=self.DataDev['cell_offset_mp'])
+        self.Args['Np_stay'] = self.DataDev['cell_offset'][-2].get().item()
 
         self.DataDev['new_sum_in_cell'] = self.dev_arr(val=0,
             dtype=np.uint32, shape=grid.Args['Nxm1Nrm1']+1,
@@ -320,30 +273,38 @@ class ParticleMethodsCL(GenericMethodsCL):
                        np.uint32(self.Args['Np'])).wait()
 
     def align_and_damp(self, comps_align):
-        num_staying = self.DataDev['cell_offset'][-2].get().item()
+#        num_staying = self.DataDev['cell_offset'][-2].get().item()
 
-        if num_staying == 0:
+        if self.Args['Np_stay'] == 0:
             for comp in comps_align + ['sort_indx',]:
                 self.DataDev[comp] = self.dev_arr(shape=0,
                     dtype=self.DataDev[comp].dtype)
             self.reset_num_parts()
             return
 
-        WGS, WGS_tot = self.get_wgs(num_staying)
+        WGS, WGS_tot = self.get_wgs(self.Args['Np_stay'])
         for comp in comps_align:
             buff_parts = self.dev_arr(dtype=self.DataDev[comp].dtype,
-                                      shape=(num_staying, ))
+                                      shape=(self.Args['Np_stay'], ))
 
             self._data_align_dbl_knl(self.queue, (WGS_tot, ), (WGS, ),
                                      self.DataDev[comp].data,
                                      buff_parts.data,
                                      self.DataDev['sort_indx'].data,
-                                     np.uint32(num_staying)).wait()
+                                     np.uint32(self.Args['Np_stay'])).wait()
             self.DataDev[comp] = buff_parts
 
-        self.DataDev['sort_indx'] = arange(self.queue, 0, num_staying, 1,
-            dtype=np.uint32)
+        self.DataDev['sort_indx'] = arange(self.queue, 0,
+                                           self.Args['Np_stay'], 1,
+                                           dtype=np.uint32)
         self.reset_num_parts()
+
+    def reset_num_parts(self, Np=None):
+        if Np is None:
+            Np = self.DataDev['x'].size
+        self.DataDev['Np'].fill(Np)
+        self.Args['Np'] = Np
+        self.Args['Np_stay'] = Np
 
     def _fill_arr_randn(self, arr, mu=0, sigma=1):
         self._generator_knl.fill_normal(ary=arr, queue=self.queue,
@@ -366,3 +327,47 @@ class ParticleMethodsCL(GenericMethodsCL):
         for key in self.DataDev.keys():
             if key[-3:]=='_mp':
                 self.DataDev[key].free_held()
+
+    def index_sort_rdx(self, grid):
+        WGS, WGS_tot = self.get_wgs(self.Args['Np'])
+
+        self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
+            shape=self.Args['Np'], allocator=self.DataDev['indx_in_cell_mp'])
+
+        self.DataDev['cell_offset'] = self.dev_arr(val=0,
+            dtype=np.uint32, shape=grid.Args['Nxm1Nrm1']+1,
+            allocator=self.DataDev['cell_offset_mp'])
+
+        part_strs =  ['x', 'y', 'z', 'cell_offset', 'Np']
+        grid_strs =  ['Nx', 'Xmin', 'dx_inv',
+                      'Nr', 'Rmin', 'dr_inv']
+
+        args = [self.DataDev[arg].data for arg in part_strs] + \
+               [self.DataDev['indx_in_cell'].data, ] + \
+               [grid.DataDev[arg].data for arg in grid_strs]
+
+        self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
+
+        self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'],
+            allocator=self.DataDev['cell_offset_mp'])
+
+        if self.comm.sort_method == 'Radix':
+            indx_size = self.DataDev['indx_in_cell'].size
+            self.DataDev['sort_indx'] = arange(self.queue, 0, indx_size, 1,
+                dtype=np.uint32, allocator=self.DataDev['sort_indx_mp'])
+
+            (self.DataDev['indx_in_cell'], self.DataDev['sort_indx']), evnt = \
+                self._sort_rdx_knl(self.DataDev['indx_in_cell'],
+                                   self.DataDev['sort_indx'],
+                                   key_bits=len(bin(self.Args['Np'])),
+                                   allocator=self.DataDev['indx_in_cell_mp'])
+            evnt.wait()
+
+        elif self.comm.sort_method == 'NumPy':
+                self.DataDev['sort_indx'] = \
+                    self.DataDev['indx_in_cell'].get().argsort()
+
+                self.DataDev['sort_indx'] = to_device(
+                    self.queue, self.DataDev['sort_indx'])
+
+

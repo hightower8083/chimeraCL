@@ -339,6 +339,7 @@ __kernel void gather_and_push(
   __global uint *indx_offset,
   __constant double *dt,
              uint Np,
+             uint Np_stay,
   __constant uint *Nx,
   __constant double *xmin,
   __constant double *dx_inv,
@@ -364,7 +365,7 @@ __kernel void gather_and_push(
  if (ip<Np)
   {
    uint ip_srtd = sorting_indx[ip];
-   if (ip_srtd<Np)
+   if (ip_srtd<Np_stay)
    {
 
     // get cell number and period of grid
@@ -384,8 +385,6 @@ __kernel void gather_and_push(
 
     int ix = (int) floor( (xp-xmin_loc) * dx_inv_loc );
     int ir = (int) floor( (rp-rmin_loc) * dr_inv_loc );
-
-if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 && ir>=0){
 
     uint i_cell = ix + ir*Nx_cell;
     uint i_grid = ix + ir*Nx_grid;
@@ -511,5 +510,4 @@ if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 && ir>=0){
     g_inv[ip_srtd] = g_p_inv;
    }
   }
-}
 }

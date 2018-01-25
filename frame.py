@@ -44,7 +44,6 @@ class Frame():
             inject_domain['Xmax'] = inject_domain['Xmin'] + x_shift
             inject_domain['Rmin'] = grid.Args['Rmin']*(grid.Args['Rmin']>0)
             inject_domain['Rmax'] = grid.Args['Rmax']
-            print(inject_domain['Xmax']-inject_domain['Xmin'])
 
             specie.make_new_domain(inject_domain,
                 density_profiles=self.Args['DensityProfiles'])
@@ -56,5 +55,8 @@ class Frame():
 
             specie.sort_parts(grid=grid)
             specie.align_parts()
-            specie.Args['right_lim'] = specie.DataDev['x'][-1].get().item() \
-                                       + 0.5*specie.Args['ddx']
+
+            Num_ppc = np.int32(np.prod(specie.Args['Nppc'])+1)
+            x_max = specie.DataDev['x'][-Num_ppc:].get().max()
+
+            specie.Args['right_lim'] = x_max + 0.5*specie.Args['ddx']
