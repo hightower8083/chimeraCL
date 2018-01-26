@@ -1,4 +1,6 @@
 // this is a source of particles kernels for chimeraCL project
+#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+
 
 // Multiply particles weight by an intrpolant profile
 __kernel void profile_by_interpolant(
@@ -113,14 +115,12 @@ __kernel void index_and_sum_in_cell(
     if (ix > 0 && ix < Nx_loc-1 && ir < Nr_loc-1 && ir >= 0)
      {
       indx_in_cell[ip] = ix + ir * Nx_loc;
-      atomic_add(&sum_in_cell[indx_in_cell[ip]], 1U);
-//      atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);
+      atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);
      }
     else
      {
       indx_in_cell[ip] = Nr_loc*Nx_loc ;
-      atomic_add(&sum_in_cell[indx_in_cell[ip]], 1U);
-//      atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);
+      atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);
      }
   }
 }
@@ -194,7 +194,7 @@ __kernel void sort(
   if (ip < num_p)
    {
     uint i_cell = indx_in_cell[ip];
-    uint ip_offset_loc = atomic_add(&new_sum_in_cell[i_cell], 1U);
+    uint ip_offset_loc = atom_add(&new_sum_in_cell[i_cell], 1U);
     uint ip_sorted = cell_offset[i_cell] + ip_offset_loc;
     sorted_indx[ip_sorted] = ip;
    }

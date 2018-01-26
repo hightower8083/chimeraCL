@@ -97,7 +97,7 @@ class Particles(ParticleMethodsCL):
             self.DataDev[arg] = self.dev_arr(shape=0,dtype=np.double)
 
         for arg in ['cell_offset', 'indx_in_cell',
-                    'sort_indx', 'new_sum_in_cell']:
+                    'sort_indx', 'sum_in_cell']:
             allocator = ImmediateAllocator(self.comm.queue)
             self.DataDev[arg + '_mp'] = MemoryPool(allocator)
 

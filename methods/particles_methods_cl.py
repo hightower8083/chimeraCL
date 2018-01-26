@@ -229,11 +229,11 @@ class ParticleMethodsCL(GenericMethodsCL):
         self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
             shape=self.Args['Np'], allocator=self.DataDev['indx_in_cell_mp'])
 
-        self.DataDev['cell_offset'] = self.dev_arr(val=0,
+        self.DataDev['sum_in_cell'] = self.dev_arr(val=0,
             dtype=np.uint32, shape=grid.Args['Nxm1Nrm1']+1,
-            allocator=self.DataDev['cell_offset_mp'])
+            allocator=self.DataDev['sum_in_cell_mp'])
 
-        part_strs =  ['x', 'y', 'z', 'cell_offset', 'Np']
+        part_strs =  ['x', 'y', 'z', 'sum_in_cell', 'Np']
         grid_strs =  ['Nx', 'Xmin', 'dx_inv',
                       'Nr', 'Rmin', 'dr_inv']
 
@@ -243,14 +243,12 @@ class ParticleMethodsCL(GenericMethodsCL):
 
         self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
 
-        self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'],
+        self.DataDev['cell_offset'] = self._cumsum(self.DataDev['sum_in_cell'],
             allocator=self.DataDev['cell_offset_mp'])
 
-        self.Args['Np_stay'] = self.DataDev['cell_offset'][-2].get().item()
+        self.set_to(self.DataDev['sum_in_cell'], 0)
 
-        self.DataDev['new_sum_in_cell'] = self.dev_arr(val=0,
-            dtype=np.uint32, shape=grid.Args['Nxm1Nrm1']+1,
-            allocator=self.DataDev['new_sum_in_cell_mp'])
+        self.Args['Np_stay'] = self.DataDev['cell_offset'][-2].get().item()
 
         self.DataDev['sort_indx'] = self.dev_arr(dtype=np.uint32,
             shape=self.Args['Np'], allocator=self.DataDev['sort_indx_mp'])
@@ -259,7 +257,7 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._sort_knl(self.queue, (WGS_tot, ), (WGS, ),
                        self.DataDev['cell_offset'].data,
                        self.DataDev['indx_in_cell'].data,
-                       self.DataDev['new_sum_in_cell'].data,
+                       self.DataDev['sum_in_cell'].data,
                        self.DataDev['sort_indx'].data,
                        np.uint32(self.Args['Np'])).wait()
 
@@ -303,9 +301,10 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._generator_knl.fill_uniform(ary=arr, queue=self.queue,
                                          a=xmin,b=xmax).wait()
 
-    def _cumsum(self, arr_in, allocator=None):
-        evnt, arr_tmp = cumsum(arr_in, return_event=True, queue=self.queue)
-        arr_out = self.dev_arr(dtype=np.uint32, shape=arr_tmp.size+1,
+    def _cumsum(self, arr_in, allocator=None, output_dtype=np.uint32):
+        evnt, arr_tmp = cumsum(arr_in, return_event=True,
+                               queue=self.queue, output_dtype=output_dtype)
+        arr_out = self.dev_arr(dtype=output_dtype, shape=arr_tmp.size+1,
                                allocator=allocator)
         arr_out[0] = 0
         evnt.wait()
