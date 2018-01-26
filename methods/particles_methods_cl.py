@@ -5,6 +5,7 @@ from pyopencl.array import arange, cumsum, to_device
 from pyopencl import enqueue_marker, enqueue_barrier
 from pyopencl import Program
 from pyopencl.clmath import sqrt as sqrt
+from time import time
 
 from .generic_methods_cl import GenericMethodsCL
 from .generic_methods_cl import compiler_options
@@ -12,7 +13,7 @@ from .generic_methods_cl import compiler_options
 from chimeraCL import __path__ as src_path
 src_path = src_path[0] + '/kernels/'
 
-loop_steps = ['indx/sum_in_cell', 'cell_offset', 'sort_indx']
+loop_steps = ['indx/sum_in_cell', 'cumsum', 'sort_indx']
 
 
 class ParticleMethodsCL(GenericMethodsCL):
@@ -39,6 +40,7 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._fill_grid_knl = prg.fill_grid
         self._profile_by_interpolant_knl = prg.profile_by_interpolant
 
+        self.timit = True
         self.t_start = 0
         self.Timer = {}
         for str in loop_steps:
