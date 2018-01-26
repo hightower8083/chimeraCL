@@ -5,6 +5,7 @@ from pyopencl.array import arange, cumsum, to_device
 from pyopencl import enqueue_marker, enqueue_barrier
 from pyopencl import Program
 from pyopencl.clmath import sqrt as sqrt
+from pyopencl.algorithm import RadixSort
 
 from .generic_methods_cl import GenericMethodsCL
 from .generic_methods_cl import compiler_options
@@ -30,6 +31,12 @@ class ParticleMethodsCL(GenericMethodsCL):
         prg = Program(self.ctx, particles_sources).\
             build(options=compiler_options)
 
+
+        self._sort_rdx_knl = RadixSort(self.ctx,
+                      "uint *indx_in_cell, uint *indx_init",
+                      key_expr="indx_in_cell[i]", index_dtype=np.uint32,
+                      sort_arg_names=["indx_in_cell", "indx_init"],
+                      options=compiler_options)
         self._data_align_dbl_knl = prg.data_align_dbl
         self._data_align_int_knl = prg.data_align_int
         self._index_and_sum_knl = prg.index_and_sum_in_cell
@@ -224,6 +231,52 @@ class ParticleMethodsCL(GenericMethodsCL):
         self.flag_sorted = False
 
     def index_sort(self, grid):
+
+        WGS, WGS_tot = self.get_wgs(self.Args['Np'])
+
+        self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
+              shape=self.Args['Np'], allocator=self.DataDev['indx_in_cell_mp'])
+
+        self.DataDev['cell_offset'] = self.dev_arr(val=0,
+              dtype=np.uint32, shape=grid.Args['Nxm1Nrm1']+1,
+              allocator=self.DataDev['cell_offset_mp'])
+
+        part_strs =  ['x', 'y', 'z', 'cell_offset', 'Np']
+        grid_strs =  ['Nx', 'Xmin', 'dx_inv',
+                        'Nr', 'Rmin', 'dr_inv']
+
+        args = [self.DataDev[arg].data for arg in part_strs] + \
+                 [self.DataDev['indx_in_cell'].data, ] + \
+                 [grid.DataDev[arg].data for arg in grid_strs]
+
+        self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
+
+        self.DataDev['cell_offset'] = self._cumsum(self.DataDev['cell_offset'],
+              allocator=self.DataDev['cell_offset_mp'])
+
+        self.Args['Np_stay'] = self.DataDev['cell_offset'][-2].get().item()
+
+        if self.comm.sort_method == 'Radix':
+            indx_size = self.DataDev['indx_in_cell'].size
+            self.DataDev['sort_indx'] = arange(self.queue, 0, indx_size, 1,
+                  dtype=np.uint32, allocator=self.DataDev['sort_indx_mp'])
+
+            (self.DataDev['indx_in_cell'], self.DataDev['sort_indx']), evnt = \
+                  self._sort_rdx_knl(self.DataDev['indx_in_cell'],
+                                     self.DataDev['sort_indx'],
+                                     key_bits=len(bin(self.Args['Np'])),
+                                     allocator=self.DataDev['indx_in_cell_mp'])
+            evnt.wait()
+
+        elif self.comm.sort_method == 'NumPy':
+                self.DataDev['sort_indx'] = \
+                    self.DataDev['indx_in_cell'].get().argsort()
+
+                self.DataDev['sort_indx'] = to_device(
+                      self.queue, self.DataDev['sort_indx'])
+
+
+    def index_sort_new(self, grid):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
         self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
