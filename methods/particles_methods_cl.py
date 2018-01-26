@@ -12,6 +12,7 @@ from .generic_methods_cl import compiler_options
 from chimeraCL import __path__ as src_path
 src_path = src_path[0] + '/kernels/'
 
+loop_steps = ['indx/sum_in_cell', 'cell_offset', 'sort_indx']
 
 
 class ParticleMethodsCL(GenericMethodsCL):
@@ -37,6 +38,22 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._push_xyz_knl = prg.push_xyz
         self._fill_grid_knl = prg.fill_grid
         self._profile_by_interpolant_knl = prg.profile_by_interpolant
+
+        self.t_start = 0
+        self.Timer = {}
+        for str in loop_steps:
+            self.Timer[str] = 0
+
+
+    def timer_start(self):
+        if self.timit is True:
+            self.t_start = time()
+
+    def timer_record(self, method_str):
+        if self.timit is True:
+            enqueue_barrier(self.comm.queue)
+            self.Timer[method_str] += time() - self.t_start
+
 
     def add_new_particles(self, source=None):
 
@@ -226,6 +243,7 @@ class ParticleMethodsCL(GenericMethodsCL):
     def index_sort(self, grid):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
+        self.timer_start()
         self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
             shape=self.Args['Np'], allocator=self.DataDev['indx_in_cell_mp'])
 
@@ -242,14 +260,18 @@ class ParticleMethodsCL(GenericMethodsCL):
                [grid.DataDev[arg].data for arg in grid_strs]
 
         self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
+        self.timer_record('indx/sum_in_cell')
 
+        self.timer_start()
         self.DataDev['cell_offset'] = self._cumsum(self.DataDev['sum_in_cell'],
             allocator=self.DataDev['cell_offset_mp'])
+        self.timer_record('cumsum')
 
         self.set_to(self.DataDev['sum_in_cell'], 0)
 
         self.Args['Np_stay'] = self.DataDev['cell_offset'][-2].get().item()
 
+        self.timer_start()
         self.DataDev['sort_indx'] = self.dev_arr(dtype=np.uint32,
             shape=self.Args['Np'], allocator=self.DataDev['sort_indx_mp'])
 
@@ -260,6 +282,7 @@ class ParticleMethodsCL(GenericMethodsCL):
                        self.DataDev['sum_in_cell'].data,
                        self.DataDev['sort_indx'].data,
                        np.uint32(self.Args['Np'])).wait()
+        self.timer_record('sort_indx')
 
     def align_and_damp(self, comps_align):
         if self.Args['Np_stay'] == 0:

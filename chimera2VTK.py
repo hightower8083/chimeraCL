@@ -139,20 +139,3 @@ for rec in recs:
 
     record.close()
     print('done '+rec)
-
-
-"""
-def set_vtk_scalar(sgrid, scl, scl_name):
-    sgrid.point_data.scalars = scl
-    sgrid.point_data.scalars.name = scl_name
-    return sgrid
-
-    scl_name = str(scl_list[0])
-    scl_data = record[base_str + flds_str + scl_name].value
-    fld_stack = [scl_data[0],]
-    for m in range(1, Args['M']+1,2):
-        fld_stack.append(scl_data[m] + 1.j*scl_data[m+1])
-
-    vals = make_scalar(Nx, Nr, Nt, fld_stack)
-    set_vtk_scalar(gr, vals, scl_name)
-"""

@@ -57,6 +57,12 @@ class Particles(ParticleMethodsCL):
         if 'dt' not in self.Args:
             self.Args['dt'] = 1.
 
+        if 'dx' not in self.Args:
+            self.Args['dx'] = 1.
+
+        if 'dr' not in self.Args:
+            self.Args['dr'] = 1.
+
         if 'charge' not in self.Args:
             self.Args['charge'] = -1.
 

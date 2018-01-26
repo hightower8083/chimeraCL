@@ -4,12 +4,13 @@ import os
 
 class Diagnostics:
     def __init__(self, configs_in, solver, species=[], path='diags',
-                 dtype=np.float16):
+                 dtype_flds=np.float32, dtype_parts=np.float64):
 
         self.Args = configs_in
         self.solver = solver
         self.species = species
-        self.dtype = dtype
+        self.dtype_flds = dtype_flds
+        self.dtype_parts = dtype_parts
 
         self.base_str = '/data/'
         self.flds_str = 'fields/'
@@ -79,7 +80,7 @@ class Diagnostics:
                 indx = None
 
             for part_comp in self.Args['Species']['Components']:
-                comp_vals = part.DataDev[part_comp].get().astype(self.dtype)
+                comp_vals = part.DataDev[part_comp].get().astype(self.dtype_parts)
                 if indx is None:
                     self.record[h5_path+part_comp] = comp_vals
                 else:
@@ -101,12 +102,12 @@ class Diagnostics:
         self.solver.fb_transform(scals=[fld, ], dir=1)
 
         fld_m = self.solver.DataDev[fld + '_m0'].get()[None,1:]
-        fld_stack = [fld_m, ]
+        fld_stack = [fld_m.astype(self.dtype_flds), ]
 
         for m in range(1, self.solver.Args['M']+1, 1):
             fld_m = self.solver.DataDev[fld + '_m' + str(m)]\
                     .get()[None,1:]
-            fld_stack.append(fld_m.real.astype(self.dtype))
-            fld_stack.append(fld_m.imag.astype(self.dtype))
+            fld_stack.append(fld_m.real.astype(self.dtype_flds))
+            fld_stack.append(fld_m.imag.astype(self.dtype_flds))
 
         self.record[h5_path] = np.concatenate(fld_stack, axis=0)
