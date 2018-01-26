@@ -4,8 +4,11 @@ import h5py, sys, os
 from numba import jit
 from mpi4py.MPI import COMM_WORLD as comm
 
-path = sys.argv[-1]
-Nt = 48
+path = sys.argv[1]
+if len(sys.argv)>2:
+    selection = sys.argv[2]
+
+Nt = 18
 Theta = 2*np.pi / (Nt-1) * np.arange(Nt)
 
 @jit
@@ -69,6 +72,8 @@ if np.mod(len(recs)-1, comm.size) !=0:
         print('Number of records is not dividable by number of procs ')
 
 recs = recs[comm.rank::comm.size]
+if selection=='latest':
+    recs = [recs[-1],]
 
 for rec in recs:
     record = h5py.File(path+rec,'r')
