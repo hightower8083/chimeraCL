@@ -315,3 +315,12 @@ class ParticleMethodsCL(GenericMethodsCL):
         for key in self.DataDev.keys():
             if key[-3:]=='_mp':
                 self.DataDev[key].free_held()
+
+    def free_added(self):
+        if 'Immobile' not in self.Args.keys():
+            args_strs = ['x', 'y', 'z', 'px', 'py', 'pz', 'w', 'g_inv']
+        else:
+            args_strs = ['x', 'y', 'z','w']
+
+        for arg in args_strs:
+            self.DataDev[arg+'_new'] = None

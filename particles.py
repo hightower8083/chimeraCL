@@ -26,14 +26,16 @@ class Particles(ParticleMethodsCL):
             self.index_sort(grid)
             self.flag_sorted = True
 
-    def add_particles(self, domain_in=None, beam_in=None):
+    def add_particles(self, domain_in=None, beam_in=None, source=None):
         # To be removed
-        if domain_in is not None:
-            self.make_new_domain(domain_in)
-        elif beam_in is not None:
-            self.make_new_beam(beam_in)
-
-        self.add_new_particles()
+        if source is None:
+            if domain_in is not None:
+                self.make_new_domain(domain_in)
+            elif beam_in is not None:
+                self.make_new_beam(beam_in)
+            self.add_new_particles()
+        else:
+            self.add_new_particles(source=source)
 
     def align_parts(self):
         if self.Args['Np'] == 0:

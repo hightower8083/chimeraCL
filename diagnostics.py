@@ -105,8 +105,8 @@ class Diagnostics:
 
         for m in range(1, self.solver.Args['M']+1, 1):
             fld_m = self.solver.DataDev[fld + '_m' + str(m)]\
-                    .get().astype(self.dtype)[None,1:]
-            fld_stack.append(fld_m.real)
-            fld_stack.append(fld_m.imag)
+                    .get()[None,1:]
+            fld_stack.append(fld_m.real.astype(self.dtype))
+            fld_stack.append(fld_m.imag.astype(self.dtype))
 
         self.record[h5_path] = np.concatenate(fld_stack, axis=0)

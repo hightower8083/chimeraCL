@@ -386,17 +386,14 @@ __kernel void gather_and_push(
     int ix = (int) floor( (xp-xmin_loc) * dx_inv_loc );
     int ir = (int) floor( (rp-rmin_loc) * dr_inv_loc );
 
+if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 ){
+
     uint i_cell = ix + ir*Nx_cell;
     uint i_grid = ix + ir*Nx_grid;
 
-
     double u_p[3] = {px[ip_srtd], py[ip_srtd], pz[ip_srtd]};
-
     double dt_2 = 0.5*(*dt);
-
-
     double rp_inv = 1./rp;
-
 
     double sX1 = ( xp - xmin_loc )*dx_inv_loc - ix;
     double sX0 = 1.0 - sX1;
@@ -510,4 +507,5 @@ __kernel void gather_and_push(
     g_inv[ip_srtd] = g_p_inv;
    }
   }
+}
 }

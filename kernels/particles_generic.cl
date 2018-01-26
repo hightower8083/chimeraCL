@@ -112,7 +112,7 @@ __kernel void index_and_sum_in_cell(
     ix = (int)floor( (x[ip] - *xmin)*(*dx_inv) );
     ir = (int)floor((r - *rmin)*(*dr_inv));
 
-    if (ix > 0 && ix < Nx_loc-1 && ir < Nr_loc-1 && ir >= 0)
+    if (ix > 0 && ix < Nx_loc-1 && ir < Nr_loc-1 && ir>=0)
      {
       indx_in_cell[ip] = ix + ir * Nx_loc;
       atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);

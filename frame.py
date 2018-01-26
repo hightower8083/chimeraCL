@@ -29,7 +29,7 @@ class Frame():
                 for arg in ['Xmax','Xmin','Xgrid']:
                     store[arg] += x_shift
 
-    def inject_plasma(self, species=[], grid=None, steps=None):
+    def inject_plasma(self, species, grid, steps=None):
 
         if steps is None:
             steps = self.Args['Steps']
@@ -53,6 +53,8 @@ class Frame():
             else:
                 specie.add_new_particles()
 
+        for specie in species:
+            specie.free_added()
             specie.sort_parts(grid=grid)
             specie.align_parts()
 
