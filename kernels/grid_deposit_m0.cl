@@ -62,7 +62,7 @@ if (i_cell < *NxNr_4)
     else if (cell_offset==3)
       {ix += 1;ir += 1;}
 
-if (ix<Nx_cell && ir<Nr_cell ){
+if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 && ir>=0 ){
 
     // get 1D indicies of the selected
     // cell and grid node on the global grid
@@ -195,7 +195,7 @@ __kernel void depose_vector(
     else if (cell_offset==3)
       {ix += 1;ir += 1;}
 
-if (ix<Nx_cell && ir<Nr_cell ){
+if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 && ir>=0 ){
     // get 1D indicies of the selected
     // cell and grid node on the global grid
     uint i_cell_glob = ix + ir*Nx_cell;
@@ -289,6 +289,7 @@ __kernel void gather_and_push(
   __global uint *indx_offset,
   __constant double *dt,
              uint Np,
+             uint Np_stay,
   __constant uint *Nx,
   __constant double *xmin,
   __constant double *dx_inv,
@@ -308,7 +309,7 @@ __kernel void gather_and_push(
  if (ip<Np)
   {
    uint ip_srtd = sorting_indx[ip];
-   if (ip_srtd<Np)
+   if (ip_srtd<Np_stay)
    {
 
     // get cell number and period of grid
@@ -316,25 +317,25 @@ __kernel void gather_and_push(
     int Nx_cell = Nx_grid - 1;
     int Nr_cell = (int) *Nr-1;
 
-    double xmin_loc = *xmin;
-    double rmin_loc = *rmin;
-
     double xp = x[ip_srtd];
     double yp = y[ip_srtd];
     double zp = z[ip_srtd];
-
-    double u_p[3] = {px[ip_srtd], py[ip_srtd], pz[ip_srtd]};
-
-    double dt_2 = 0.5*(*dt);
-
     double rp = sqrt(yp*yp + zp*zp);
 
-    double rp_inv = 1./rp;
+    double xmin_loc = *xmin;
+    double rmin_loc = *rmin;
     double dr_inv_loc = *dr_inv;
     double dx_inv_loc = *dx_inv;
 
     int ix = (int) floor( (xp-xmin_loc) * dx_inv_loc );
     int ir = (int) floor( (rp-rmin_loc) * dr_inv_loc );
+
+if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 ){
+
+    double u_p[3] = {px[ip_srtd], py[ip_srtd], pz[ip_srtd]};
+    double dt_2 = 0.5*(*dt);
+    double rp_inv = 1./rp;
+
     uint i_cell = ix + ir*Nx_cell;
     uint i_grid = ix + ir*Nx_grid;
 
@@ -422,4 +423,5 @@ __kernel void gather_and_push(
     g_inv[ip_srtd] = g_p_inv;
    }
   }
+}
 }

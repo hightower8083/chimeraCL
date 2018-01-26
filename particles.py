@@ -26,26 +26,33 @@ class Particles(ParticleMethodsCL):
             self.index_sort(grid)
             self.flag_sorted = True
 
-    def add_particles(self, domain_in=None, beam_in=None):
+    def add_particles(self, domain_in=None, beam_in=None, source=None):
         # To be removed
-        if domain_in is not None:
-            self.make_new_domain(domain_in)
-        elif beam_in is not None:
-            self.make_new_beam(beam_in)
-
-        self.add_new_particles()
+        if source is None:
+            if domain_in is not None:
+                self.make_new_domain(domain_in)
+            elif beam_in is not None:
+                self.make_new_beam(beam_in)
+            self.add_new_particles()
+        else:
+            self.add_new_particles(source=source)
 
     def align_parts(self):
         if self.Args['Np'] == 0:
             return
+        if 'Immobile' in self.Args.keys():
+            comps_align = ['x', 'y', 'z','w']
+        else:
+            comps_align = ['x', 'y', 'z', 'px', 'py', 'pz',
+                           'g_inv', 'w']
 
-        self.align_and_damp(comps_align=['x', 'y', 'z', 'px', 'py', 'pz',
-                                         'g_inv', 'w'])
+        self.align_and_damp(comps_align=comps_align)
 
     def _process_configs(self, configs_in):
         self.Args = configs_in
 
         self.Args['Np'] = 0
+        self.Args['Np_stay'] = 0
 
         if 'dt' not in self.Args:
             self.Args['dt'] = 1.
@@ -83,12 +90,16 @@ class Particles(ParticleMethodsCL):
         self.Args['dont_keep'] = []
 
     def _init_data_on_dev(self):
+        if 'Immobile' in self.Args.keys():
+            args_strs =  ['x', 'y', 'z', 'w']
+        else:
+            args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w','g_inv']
 
-        args_strs =  ['x', 'y', 'z', 'px', 'py', 'pz', 'w','g_inv']
         for arg in args_strs:
             self.DataDev[arg] = self.dev_arr(shape=0,dtype=np.double)
 
-        for arg in ['cell_offset', 'indx_in_cell', 'sort_indx']:
+        for arg in ['cell_offset', 'indx_in_cell',
+                    'sort_indx', 'sum_in_cell']:
             allocator = ImmediateAllocator(self.comm.queue)
             self.DataDev[arg + '_mp'] = MemoryPool(allocator)
 

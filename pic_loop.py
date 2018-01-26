@@ -28,11 +28,14 @@ def timer_plot(Timer):
 
 
 class PIC_loop:
-    def __init__(self, solvers, species, frames, timit=False):
+    def __init__(self, solvers=[], species=[],
+                 frames=[], diags=[], timit=False):
         self.solvers = solvers
         self.mainsolver = self.solvers[0]
         self.species = species
         self.frames = frames
+        self.diags = diags
+
         self.timit = timit
         self.it = 0
 
@@ -52,6 +55,9 @@ class PIC_loop:
             self.Timer[method_str] += time() - self.t_start
 
     def step(self):
+
+        for diag in self.diags:
+            diag.make_record(self.it)
 
         self.timer_start()
         for frame in self.frames:

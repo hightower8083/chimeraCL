@@ -97,7 +97,7 @@ class Grid(GridMethodsCL):
         self.Args['NxNr'] = self.Args['Nr'] * self.Args['Nx']
         self.Args['Nxm1Nrm1'] = (self.Args['Nr']-1) * (self.Args['Nx']-1)
         self.Args['NxNrm1'] = (self.Args['Nr']-1) * self.Args['Nx']
-        self.Args['NxNr_4'] = self.Args['Nr']//2 * self.Args['Nx']//2
+        self.Args['NxNr_4'] = (self.Args['Nr'])//2 * (self.Args['Nx'])//2
 
         self.Args['dont_send'] = []
         self.Args['dont_keep'] = []
