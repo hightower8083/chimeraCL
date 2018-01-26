@@ -169,8 +169,6 @@ class GridMethodsCL(GenericMethodsCL):
         part_str = ['x', 'y', 'z', 'px', 'py', 'pz', 'g_inv',
                     'sort_indx','cell_offset', 'FactorPush']
 
-        #Np_stay = parts.DataDev['cell_offset'][-1].get().item()
-
         grid_str = ['Nx', 'Xmin', 'dx_inv',
                     'Nr', 'Rmin', 'dr_inv',
                     'Nxm1Nrm1']

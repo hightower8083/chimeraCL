@@ -3,10 +3,13 @@ import h5py
 import os
 
 class Diagnostics:
-    def __init__(self, configs_in, solver, species=[], path='diags'):
+    def __init__(self, configs_in, solver, species=[], path='diags',
+                 dtype=np.float16):
+
         self.Args = configs_in
         self.solver = solver
         self.species = species
+        self.dtype = dtype
 
         self.base_str = '/data/'
         self.flds_str = 'fields/'
@@ -76,7 +79,7 @@ class Diagnostics:
                 indx = None
 
             for part_comp in self.Args['Species']['Components']:
-                comp_vals = part.DataDev[part_comp].get()
+                comp_vals = part.DataDev[part_comp].get().astype(self.dtype)
                 if indx is None:
                     self.record[h5_path+part_comp] = comp_vals
                 else:
@@ -101,7 +104,8 @@ class Diagnostics:
         fld_stack = [fld_m, ]
 
         for m in range(1, self.solver.Args['M']+1, 1):
-            fld_m = self.solver.DataDev[fld + '_m' + str(m)].get()[None,1:]
+            fld_m = self.solver.DataDev[fld + '_m' + str(m)]\
+                    .get().astype(self.dtype)[None,1:]
             fld_stack.append(fld_m.real)
             fld_stack.append(fld_m.imag)
 

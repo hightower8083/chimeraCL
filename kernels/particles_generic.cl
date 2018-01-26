@@ -1,6 +1,4 @@
 // this is a source of particles kernels for chimeraCL project
-#pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
-#pragma OPENCL EXTENSION cl_khr_fp64:enable
 
 // Multiply particles weight by an intrpolant profile
 __kernel void profile_by_interpolant(
