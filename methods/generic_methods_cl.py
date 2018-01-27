@@ -151,11 +151,18 @@ class GenericMethodsCL:
 
 class Communicator:
     def __init__(self, **ctx_kw_args):
+        print("""
+\t############ WELCOME TO CHIMERA.CL ############
+""")
         if ctx_kw_args == {}:
-            print("Context is not chosen, please, do it now")
-            print("(you can specify argument: answers=[..,] )")
+            print("""
+\t  CONTEXT IS NOT CHOSEN, PLEASE, DO IT NOW.
+\t  TO AVOID BEING ASKED IN THE FUTURE, YOU MAY
+\t  SPECIFY ARGUMENT OF COMMUNICATOR, e.g.
+\t    comm = Communicator(answers=[0,2])
+\t################################################
+""")
             ctx_kw_args['interactive'] = True
-
         self.ctx = create_some_context(**ctx_kw_args)
         self.queue = CommandQueue(self.ctx)
 
@@ -168,22 +175,21 @@ class Communicator:
         self.plat_name = selected_dev.platform.vendor
         self.ocl_version = selected_dev.opencl_c_version
 
-        print("{} device {} is chosen on {} platform with {} compiler".
-              format(self.dev_type, self.dev_name,
-                     self.plat_name, self.ocl_version))
+        print("""
+\t  {} DEVICE {} IS CHOSEN
+\t  ON {} PLATFORM
+\t  WITH {} COMPILER
+""".format(self.dev_type, self.dev_name,
+           self.plat_name, self.ocl_version))
 
         if self.dev_type=='CPU' and self.plat_name=='Apple':
-            print('\tReikna FFT is replaced by pyFFTW')
+            print('\t\tReikna FFT is replaced by pyFFTW')
             self.fft_method = 'pyFFTW'
         else:
             self.fft_method = 'Reikna'
 
         if self.dev_type=='CPU':
-            print('\tReikna MatrixMul is replaced by numpy.dot')
+            print('\t\tReikna MatrixMul is replaced by numpy.dot')
             self.dot_method = 'NumPy'
         else:
             self.dot_method = 'Reikna'
-
-        self.sort_method = 'Radix'
-
-

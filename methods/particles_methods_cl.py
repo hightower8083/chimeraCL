@@ -13,7 +13,6 @@ from chimeraCL import __path__ as src_path
 src_path = src_path[0] + '/kernels/'
 
 
-
 class ParticleMethodsCL(GenericMethodsCL):
 
     def init_particle_methods(self):
