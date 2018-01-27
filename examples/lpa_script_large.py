@@ -1,9 +1,9 @@
 """
 
 Example is inspired by the simulation presented in
-R. Lehe et al, Computer Physics Communications **203**, 66 (2016)
+R. Lehe et al, Computer Physics Communications 203, 66 (2016)
 
-""
+"""
 
 import sys
 from time import time
