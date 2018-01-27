@@ -15,9 +15,9 @@ The second goal of CHIMERA(.CL) is to design the code with maximum flexibility:
 
 Presenly developed methods are using [openCL](https://www.khronos.org/opencl) via [PyOpenCL](https://mathema.tician.de/software/pyopencl) API which also benefits from a few methods provided by [Reikna](http://reikna.publicfields.net). 
 
-Code also includes the [tvtk](http://docs.enthought.com/mayavi/tvtk/README.html)-based script to convert the output gerenated by the code into the [VTK](https://www.vtk.org) containers.
+Code also includes the [tvtk](http://docs.enthought.com/mayavi/tvtk/README.html)-based script to convert the output gerenated by the code into the [VTK](https://www.vtk.org) containers (see example below).
 
-<p align="center"><img src="https://github.com/hightower8083/chimeraCL/blob/dev/examples/fig3D.png" width="400"/></p>
+<p align="center"><img src="https://github.com/hightower8083/chimeraCL/blob/dev/examples/fig3D.png" width="500"/></p>
 
 Examples of the simulation scripts and [Paraview](https://www.paraview.org) state-file for visualising the VTK files can be found in `./examples/` folder.
 
