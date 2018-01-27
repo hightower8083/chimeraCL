@@ -17,7 +17,7 @@ Presenly developed methods are using [openCL](https://www.khronos.org/opencl) vi
 
 Code also includes the [tvtk](http://docs.enthought.com/mayavi/tvtk/README.html)-based script to convert the output gerenated by the code into the [VTK](https://www.vtk.org) containers.
 
-<p align="center"><img src="https://github.com/hightower8083/chimeraCL/blob/dev/examples/fig3D.jpg" width="400"/></p>
+<p align="center"><img src="https://github.com/hightower8083/chimeraCL/blob/dev/examples/fig3D.png" width="400"/></p>
 
 Examples of the simulation scripts and [Paraview](https://www.paraview.org) state-file for visualising the VTK files can be found in `./examples/` folder.
 
