@@ -3,6 +3,8 @@ import numpy as np
 from chimeraCL.methods.particles_methods_cl import ParticleMethodsCL
 from chimeraCL.methods.particles_methods_cl import sqrt
 from pyopencl.tools import MemoryPool, ImmediateAllocator
+from scipy.constants import m_e,c,e,epsilon_0
+
 
 class Particles(ParticleMethodsCL):
     def __init__(self, configs_in, comm=None):
@@ -91,8 +93,10 @@ class Particles(ParticleMethodsCL):
 
         self.flag_sorted = False
 
+        self.Args['w2pC'] = 4 * np.pi**2 * m_e * c**2 * epsilon_0 * 1e6 / e
+
         self.Args['dont_send'] = ['InjectorSource','charge','mass',
-                                  'dens','Immobile']
+                                  'dens','Immobile, w2pC']
         self.Args['dont_keep'] = []
 
     def _init_data_on_dev(self):
