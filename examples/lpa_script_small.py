@@ -17,36 +17,32 @@ from chimeraCL.pic_loop import PIC_loop
 ########################################
 
 # Simulation steps
-Nsteps = 20000
+Nsteps = 15000
 
 # Diagnostics
-diag_in = {'Interval': 1000,
-           'ScalarFields': ['rho', 'Ex', 'Ez'],
-           'Species':{'Components': ['x', 'y', 'z', 'w', 'px'],
-                       'Selections': [['px', 5, None], ]} }
+diag_in = {'Interval': 100,
+           'ScalarFields': ['rho', 'Ez'], }
 
 # Grid
-xmin, xmax = -100., 40.
-rmin, rmax = 0., 50.
-Nx, Nr, M = 4*1024, 252, 1
+xmin, xmax = -43., 43.
+rmin, rmax = 0., 36.
+Nx, Nr, M = 900, 90, 1
 
 # Laser
-lam0 = 0.8 # laser wavelength
-
-a0 = 4./lam0
-Lx, w0 = 10., 16.
-x0, x_foc = 0., 0.
+a0 = 3
+Lx, w0 = 10., 12.
+x0, x_foc = 0., 100.
 
 # Plasma
-dens = 2e18 / 1.1e21
+dens = 7e18 / (1.1e21/0.8**2)
 Npx, Npr, Npth = 2, 2, 4
 
 # Frame (maganes plasma injection at right boundary)
 frame_velocity = 1.
 frameSteps = 20
-dens_profiles = [{'coord':'x',
-                  'points':[-200, 40, 140, 340, 440, 1000],
-                  'values':[   0,  0,   2,   2,   1,    1]}, ]
+dens_profiles = [{'coord': 'x',
+                  'points': [-100, 43.1, 90, 5e5],
+                  'values': [   0,    0,  1,    1]}, ]
 
 ####################################################################
 ### SIMULATION CONSTRUCTOR (don't touch without asking me first) ###
@@ -92,15 +88,15 @@ frame_in = {'Velocity': frame_velocity,
 
 frame = Frame(frame_in)
 
-diag = Diagnostics(solver=solver, species=[eons, ],
+diag = Diagnostics(solver=solver, species=[eons, ], frame=frame,
                    configs_in = diag_in)
 
 loop = PIC_loop(solvers=[solver, ], species=[eons, ions],
                 frames=[frame, ], diags = [diag, ])
 
-############################################
-############ RUN THE SIMULATION ############
-############################################
+########################################
+######### RUN THE SIMULATION ###########
+########################################
 
 t0 = time()
 while loop.it<Nsteps+1:
