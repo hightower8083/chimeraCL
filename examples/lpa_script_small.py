@@ -17,10 +17,10 @@ from chimeraCL.pic_loop import PIC_loop
 ########################################
 
 # Simulation steps
-Nsteps = 15000
+Nsteps = 8000
 
 # Diagnostics
-diag_in = {'Interval': 100,
+diag_in = {'Interval': 1000,
            'ScalarFields': ['rho', 'Ez'], }
 
 # Grid
