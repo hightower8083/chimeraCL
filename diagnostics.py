@@ -96,12 +96,14 @@ class Diagnostics:
                 indx = None
 
             for part_comp in self.Args['Species']['Components']:
-                if indx is None:
+                if part.Args['Np']==0:
+                    comp_vals = np.array([], dtype=self.dtype_parts)
+                elif indx is None:
                     comp_vals = part.DataDev[part_comp].\
                         get().astype(self.dtype_parts)
                 else:
                     comp_vals = part.DataDev[part_comp].\
-                        map_to_host()[indx].copy().astype(self.dtype_parts)
+                        map_to_host()[indx].astype(self.dtype_parts)
 
                 if 'part_comp'=='w':
                     comp_vals *= self.dtype_parts(self.Args['w2pC'])
