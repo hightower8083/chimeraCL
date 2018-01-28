@@ -105,7 +105,7 @@ class Diagnostics:
                     comp_vals = part.DataDev[part_comp].\
                         map_to_host()[indx].astype(self.dtype_parts)
 
-                if 'part_comp'=='w':
+                if part_comp =='w':
                     comp_vals *= self.dtype_parts(self.Args['w2pC'])
 
                 self.record[h5_path+part_comp] = comp_vals
