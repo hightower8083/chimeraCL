@@ -53,8 +53,8 @@ class Transformer(TransformerMethodsCL):
         for m in range(self.Args['M']+1):
             kr = self.Args['kr_m'+str(m)]
             self.Args['SmoothingFilter_m'+str(m)] = \
-                (1 - np.sin(0.5*np.pi*kx[None,:]/kx.max())**2) \
-              * (1 - np.sin(0.5*np.pi*kr[:,None]/kr.max())**2)
+                (1 - np.sin(0.5*dx*kx[None,:])**2) \
+              * (1 - np.sin(0.5*dr*kr[:,None])**2)
 
         for m in range(self.Args['M']+2):
             self.Args['dont_send'].append('kr_m'+str(m))
