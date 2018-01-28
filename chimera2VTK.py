@@ -1,23 +1,23 @@
 """
     Script to convert output of chimeraCL simulation to VTK files.
     VTK files can be plotted by any appropriate viewer, I use Paraview.
-    Preferrably should be run from the simulation folder, e.g.
-    where ./diags/ folder is located. Script created the folder VTK
+    Preferrably should be ran from the simulation folder, e.g.
+    where ./diags/ folder is located. Script creates the folder VTK
     where is stores the resuts.
 
     USAGE:
-    Only user parameter is Nt which defines number of asimuthal planes
+    The only user parameter is Nt which defines number of asimuthal planes
     where fields should be constructed, e.g. mininal reasonable value is
-    Nt=5, and for the nicer 3D plots Nt>25 is recommended
+    Nt=5, and for the nice 3D plots Nt>25 is recommended.
 
     Script take the path-to-data argument, and in chimeraCL it is
     by default ./diags/, e.g.
         python ~/CODES/chimeraCL/chimera2VTK.py diags/
 
-    Additional argument 'latest' forces to treat on the last output, e.g.
+    Additional argument 'latest' forces to treat only the last output, e.g.
         python ~/CODES/chimeraCL/chimera2VTK.py diags/ latest
 
-    Script can be run in multi-proc mode via MPI, e.g.
+    Script can be used in multi-proc mode via MPI, e.g.
         mpirun -np 4 python ~/CODES/chimeraCL/chimera2VTK.py diags/
 
     NB: If simulation was done in a frame moving at v_f and
