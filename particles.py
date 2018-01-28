@@ -3,7 +3,7 @@ import numpy as np
 from chimeraCL.methods.particles_methods_cl import ParticleMethodsCL
 from chimeraCL.methods.particles_methods_cl import sqrt
 from pyopencl.tools import MemoryPool, ImmediateAllocator
-from scipy.constants import m_e,c,e,epsilon_0
+from scipy.constants import m_e, c, e, epsilon_0
 
 
 class Particles(ParticleMethodsCL):
