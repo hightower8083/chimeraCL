@@ -17,8 +17,8 @@ head_init = {
 }
 
 generic = {
-  'vec_cells_alloc'     : '    double vec_cell_m{}[3][2][2][2]',
-  'scl_cells_alloc'     : '    double scl_cell_m{0}[2][2][2];',
+  'vec_cells_alloc'     : "    double vec_cell_m{}[3][2][2][2];",
+  'scl_cells_alloc'     : "    double scl_cell_m{0}[2][2][2];",
   'eb_cells_alloc'      : """
     double e_cell_m{0}[3][2][2][2] ;
     double b_cell_m{0}[3][2][2][2] ;""",
@@ -28,7 +28,6 @@ generic = {
   'scl_cells_init'      : """
         scl_cell_m{0}[i][j][0] = 0.;
         scl_cell_m{0}[i][j][1] = 0.;""",
-
   'eb_cells_init'       : """
         e_cell_m{0}[0][i][j][0] = 2 * ((double) ex_m{0}[i_loc].s0);
         e_cell_m{0}[0][i][j][1] = 2 * ((double) ex_m{0}[i_loc].s1);
@@ -47,7 +46,7 @@ generic = {
 
         b_cell_m{0}[2][i][j][0] = 2 * ((double) bz_m{0}[i_loc].s0);
         b_cell_m{0}[2][i][j][1] = 2 * ((double) bz_m{0}[i_loc].s1);""",
-  'init_exp'            : '    double exp_m{}[2];',
+  'init_exp'            : "    double exp_m{}[2];",
   'vec_cells_compute': """
             vec_cell_m{0}[k][i][j][0] += jp_proj*exp_m{0}[0];
             vec_cell_m{0}[k][i][j][1] += jp_proj*exp_m{0}[1];""",
@@ -77,7 +76,7 @@ cross_recursive = {
     '      exp_m{}[1] = zp*rp_inv;',
     '      exp_m{0}[0] = exp_m{1}[0]*exp_m1[0] - exp_m{1}[1]*exp_m1[1];',
     '      exp_m{0}[1] = exp_m{1}[0]*exp_m1[1] + exp_m{1}[1]*exp_m1[0];'
-                     )
+                     ),
   'exp_compute_gath': (
     '      exp_m{}[0] = yp*rp_inv;',
     '      exp_m{}[1] = -zp*rp_inv;',
@@ -86,9 +85,9 @@ cross_recursive = {
                      )
 }
 
-def generate_code(M, head_init = {}, generic={}, cross_recursive={}):
+def generate_code(M, template_file): #, head_init = {}, generic={}, cross_recursive={}):
 
-    grid_kernel_template = Template(filename='grid_kernel_template.cl')
+    grid_kernel_template = Template(filename=template_file)
 
     Args = {}
 
@@ -96,7 +95,6 @@ def generate_code(M, head_init = {}, generic={}, cross_recursive={}):
 
     for key in head_init.keys():
         Args[key] = ',\n'.join([head_init[key].format(m) for m in mrange])
-        print(Args[key])
 
     for key in generic.keys():
         Args[key] = '\n'.join([generic[key].format(m) for m in mrange])
@@ -117,7 +115,8 @@ def generate_code(M, head_init = {}, generic={}, cross_recursive={}):
                               np.array(arg_1) )).T.ravel())
 
         Args[key] = '\n'.join(arg)
-        src = grid_kernel_template.render(**Args)
+
+    src = grid_kernel_template.render(**Args)
 
     return src
 

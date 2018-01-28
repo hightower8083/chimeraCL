@@ -6,6 +6,8 @@ from pyopencl import enqueue_marker, enqueue_barrier
 from .generic_methods_cl import GenericMethodsCL
 from .generic_methods_cl import compiler_options
 
+from .templater import generate_code
+
 from chimeraCL import __path__ as src_path
 src_path = src_path[0] + '/kernels/'
 
@@ -18,9 +20,13 @@ class GridMethodsCL(GenericMethodsCL):
         grid_sources = []
         grid_sources.append(''.join(open(src_path+"grid_generic.cl")\
               .readlines()) )
-        grid_sources.append(''.join( \
-              open(src_path+"grid_deposit_m"+str(self.Args['M'])+".cl")\
-              .readlines() ) )
+
+        grid_sources.append(generate_code(self.Args['M'],
+            template_file=src_path+'grid_kernel_template.cl'))
+
+#        grid_sources.append(''.join( \
+#              open(src_path+"grid_deposit_m"+str(self.Args['M'])+".cl")\
+#              .readlines() ) )
 
         grid_sources = self.block_def_str + ''.join(grid_sources)
 
