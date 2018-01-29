@@ -72,16 +72,16 @@ generic = {
 
 cross_recursive = {
   'exp_compute_dep': (
-    '      exp_m{}[0] = yp*rp_inv;',
-    '      exp_m{}[1] = zp*rp_inv;',
-    '      exp_m{0}[0] = exp_m{1}[0]*exp_m1[0] - exp_m{1}[1]*exp_m1[1];',
-    '      exp_m{0}[1] = exp_m{1}[0]*exp_m1[1] + exp_m{1}[1]*exp_m1[0];'
+"""      exp_m{0}[0] = yp*rp_inv;
+      exp_m{0}[1] = zp*rp_inv;""",
+"""      exp_m{0}[0] = exp_m{1}[0]*exp_m1[0] - exp_m{1}[1]*exp_m1[1];
+      exp_m{0}[1] = exp_m{1}[0]*exp_m1[1] + exp_m{1}[1]*exp_m1[0];"""
                      ),
   'exp_compute_gath': (
-    '      exp_m{}[0] = yp*rp_inv;',
-    '      exp_m{}[1] = -zp*rp_inv;',
-    '      exp_m{0}[0] = exp_m{1}[0]*exp_m1[0] - exp_m{1}[1]*exp_m1[1];',
-    '      exp_m{0}[1] = exp_m{1}[0]*exp_m1[1] + exp_m{1}[1]*exp_m1[0];'
+"""      exp_m{0}[0] = yp*rp_inv;
+      exp_m{0}[1] = -zp*rp_inv;""",
+"""      exp_m{0}[0] = exp_m{1}[0]*exp_m1[0] - exp_m{1}[1]*exp_m1[1];
+      exp_m{0}[1] = exp_m{1}[0]*exp_m1[1] + exp_m{1}[1]*exp_m1[0];"""
                      )
 }
 
@@ -100,19 +100,19 @@ def generate_code(M, template_file): #, head_init = {}, generic={}, cross_recurs
         Args[key] = '\n'.join([generic[key].format(m) for m in mrange])
 
     for key in cross_recursive.keys():
-        arg_0 = []
-        arg_1 = []
+        arg = []
+#        arg_1 = []
 
         if M>0:
-            arg_0.append(cross_recursive[key][0].format(1))
-            arg_1.append(cross_recursive[key][1].format(1))
+            arg.append(cross_recursive[key][0].format(1))
+#            arg_1.append(cross_recursive[key][1].format(1))
 
         for m in range(2,M+1):
-            arg_0.append(cross_recursive[key][2].format(m,m-1))
-            arg_1.append(cross_recursive[key][3].format(m,m-1))
+            arg.append(cross_recursive[key][1].format(m,m-1))
+#            arg_1.append(cross_recursive[key][3].format(m,m-1))
 
-        arg = list(np.vstack((np.array(arg_0),
-                              np.array(arg_1) )).T.ravel())
+#        arg = list(np.vstack((np.array(arg_0),
+#                              np.array(arg_1) )).T.ravel())
 
         Args[key] = '\n'.join(arg)
 
