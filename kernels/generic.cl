@@ -28,6 +28,23 @@ __kernel void append_c2c(
    }
 }
 
+
+// Kernel for z + a*(x+y) = z with complex-types (a is double)
+__kernel void zpa_xmy_z_c2c(
+           double  a,
+  __global double2 *x,
+  __global double2 *y,
+   __global double2 *z,
+            uint arr_size)
+{
+  uint i_cell = (uint) get_global_id(0);
+  if (i_cell < arr_size)
+   {
+    z[i_cell].s0 = z[i_cell].s0 + a * (x[i_cell].s0 - y[i_cell].s0);
+    z[i_cell].s1 = z[i_cell].s1 + a * (x[i_cell].s1 - y[i_cell].s1);
+   }
+}
+
 // Kernel for z + a*x = z with complex-types
 __kernel void zpaxz_c2c(
            double2 a,

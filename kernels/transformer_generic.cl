@@ -14,7 +14,7 @@ __kernel void get_m1(
     uint ix = i_grid - ir*Nx_loc;
 
     uint ix_orig = Nx_loc - ix;
-    if (ix == 0) {ix_orig = 0;}
+    if (ix == 0) {ix_orig = 0U;}
 
     uint i_grid_orig = ix_orig + ir*Nx_loc;
 

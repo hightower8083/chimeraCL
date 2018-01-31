@@ -90,8 +90,9 @@ __kernel void index_and_sum_in_cell(
   __global double *y,
   __global double *z,
   __global uint *sum_in_cell,
-  __constant uint *num_p,
   __global uint *indx_in_cell,
+  __constant uint *num_p,
+             int Ndump,
   __constant uint *Nx,
   __constant double *xmin,
   __constant double *dx_inv,
@@ -104,22 +105,22 @@ __kernel void index_and_sum_in_cell(
    {
     double r;
     int ix,ir;
-    int Nx_loc = (int) *Nx-1;
-    int Nr_loc = (int) *Nr-1;
+    int Nx_loc = (int) *Nx -1;
+    int Nr_loc = (int) *Nr -1;
 
     r = sqrt(y[ip]*y[ip]+z[ip]*z[ip]);
 
     ix = (int)floor( (x[ip] - *xmin)*(*dx_inv) );
     ir = (int)floor((r - *rmin)*(*dr_inv));
 
-    if (ix > 0 && ix < Nx_loc-1 && ir < Nr_loc-1 && ir>=0)
+    if (ix > Ndump && ix < Nx_loc-1 && ir < Nr_loc-1 && ir>=0)
      {
-      indx_in_cell[ip] = ix + ir * Nx_loc;
+      indx_in_cell[ip] = uint (ix + ir * Nx_loc);
       atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);
      }
     else
      {
-      indx_in_cell[ip] = Nr_loc*Nx_loc ;
+      indx_in_cell[ip] = uint (Nr_loc*Nx_loc) ;
       atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);
      }
   }

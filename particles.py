@@ -20,12 +20,12 @@ class Particles(ParticleMethodsCL):
         self.send_args_to_dev()
         self._init_data_on_dev()
 
-    def sort_parts(self, grid):
+    def sort_parts(self, grid, Ndump=0):
         if self.Args['Np'] == 0:
             self.flag_sorted = True
 
         if self.flag_sorted == False:
-            self.index_sort(grid)
+            self.index_sort(grid, Ndump)
             self.flag_sorted = True
 
     def add_particles(self, domain_in=None, beam_in=None, source=None):

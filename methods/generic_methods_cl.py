@@ -32,6 +32,7 @@ class GenericMethodsCL:
         self._cast_array_d2c_knl = prg.cast_array_d2c
         self._axpbyz_c2c_knl = prg.axpbyz_c2c
         self._zpaxz_c2c_knl = prg.zpaxz_c2c
+        self._zpa_xmy_z_c2c_knl = prg.zpa_xmy_z_c2c
         self._ab_dot_x_knl =  prg.ab_dot_x
         self._append_c2c_knl = prg.append_c2c
         self._set_cdouble_to_knl = prg.set_cdouble_to
@@ -132,6 +133,12 @@ class GenericMethodsCL:
                             np.complex128(a), x.data,
                             z.data, np.uint32(arr_size) ).wait()
 
+    def zpa_xmy_z(self, a, x, y, z):
+        arr_size = x.size
+        WGS, WGS_tot = self.get_wgs(arr_size)
+        self._zpa_xmy_z_c2c_knl(self.queue, (WGS_tot, ), (WGS, ),
+                             np.double(a), x.data, y.data,
+                             z.data, np.uint32(arr_size) ).wait()
 
     def ab_dot_x(self, a, b, x, z):
         arr_size = x.size

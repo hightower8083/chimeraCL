@@ -99,7 +99,7 @@ class Transformer(TransformerMethodsCL):
 
     def _init_transformer_data_on_dev(self):
         # list the names of all scalar and vector fields components
-        flds_str = ['E', 'B', 'G', 'J', 'dN0', 'dN1']
+        flds_str = ['E', 'B', 'G', 'J', 'dN0', 'dN1', 'A']
         flds_comps_str = ['rho',]
         for fld_str in flds_str:
             for comp_str in self.Args['vec_comps']:

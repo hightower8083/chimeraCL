@@ -5,7 +5,7 @@ from pyopencl import enqueue_barrier
 loop_steps = ['frame', 'push-x', 'sort', 'depose',
               'transform', 'smooth', 'data_copy',
               'grad', 'push-eb', 'damp-eb', 'restore_B',
-              'gather + push-p']
+              'gather + push-p', 'correctJ']
 
 def timer_plot(Timer):
     import matplotlib.pyplot as plt
@@ -115,10 +115,27 @@ class PIC_loop:
             solver.field_grad('rho','dN1')
             self.timer_record('grad')
 
+#            self.timer_start()
+#            solver.correct_current()
+#            self.timer_record('correctJ')
+
             self.timer_start()
             solver.push_fields()
             self.timer_record('push-eb')
 
+            """
+            #### DAMP VERSION 1
+            self.timer_start()
+            solver.restore_B_fb()
+            solver.damp_fields()
+
+            self.timer_start()
+            solver.restore_G_fb()
+            self.timer_record('damp-eb')
+            # END VERSION 1
+            """
+
+            #### DAMP VERSION 0
             self.timer_start()
             solver.damp_fields()
             self.timer_record('damp-eb')
@@ -126,6 +143,8 @@ class PIC_loop:
             self.timer_start()
             solver.restore_B_fb()
             self.timer_record('restore_B')
+            err = solver.check_divB()
+            # END VERSION 0
 
             self.timer_start()
             solver.fb_transform(vects=['E', 'B'], dir=1)
@@ -139,4 +158,4 @@ class PIC_loop:
             parts.free_mp()
 
         self.it +=1
-        return self.it
+        return err

@@ -2,6 +2,7 @@ import numpy as np
 
 from chimeraCL.transformer import Transformer
 from chimeraCL.grid import Grid
+from pyopencl.array import sum as sum_cl
 
 from chimeraCL.methods.solver_methods_cl import SolverMethodsCL
 
@@ -29,14 +30,41 @@ class Solver(Grid, Transformer, SolverMethodsCL):
     def push_fields(self):
         self.advance_fields(vecs=['E', 'G', 'J', 'dN0', 'dN1'])
 
-    def damp_fields(self):
-        self.fb_transform(vects=['E', 'G'], dir=1, mode='half')
-        self.profile_edges(['E', 'G'])
-        self.fb_transform(vects=['E', 'G'], dir=0, mode='half')
+    def damp_fields(self, vects=['E', 'G']):
+        self.fb_transform(vects=vects, dir=1, mode='half')
+        self.profile_edges(vects)
+        self.fb_transform(vects=vects, dir=0, mode='half')
 
     def restore_B_fb(self):
         self.field_rot('G', 'B')
         self.field_poiss_vec('B')
+
+    def restore_G_fb(self):
+        self.field_rot('B', 'G')
+
+    def correct_current(self):
+        self.field_div('J', 'rho')
+        self.field_grad('rho', 'A')
+        for m in range(self.Args['M']+1):
+            for comp in self.Args['vec_comps']:
+                key = comp + '_fb_m' + str(m)
+                self.zpa_xmy_z(self.Args['dt_inv'], self.DataDev['dN1'+key],
+                               self.DataDev['dN0'+key], self.DataDev['A'+key])
+
+        self.field_poiss_vec('A')
+
+        for m in range(self.Args['M']+1):
+            for comp in self.Args['vec_comps']:
+                key = comp + '_fb_m' + str(m)
+                self.append_c2c(self.DataDev['J'+key], self.DataDev['A'+key])
+
+    def check_divB(self):
+        self.field_div('B', 'rho')
+        err = 0
+        for m in range(self.Args['M']+1):
+            err += sum_cl(self.DataDev['rho_fb_m'+str(m)].real**2).get().item()
+            err += sum_cl(self.DataDev['rho_fb_m'+str(m)].imag**2).get().item()
+        return err
 
     def _make_ms_coefficients(self):
         for m in range(self.Args['M']+1):

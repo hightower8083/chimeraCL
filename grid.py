@@ -105,7 +105,7 @@ class Grid(GridMethodsCL):
 
     def _init_grid_data_on_dev(self):
 
-        flds_vec_str = ['E', 'B', 'J', 'G']
+        flds_vec_str = ['E', 'B', 'J', 'G', ]
         flds_scl_str = ['rho', ]
 
         flds_comps_str = []

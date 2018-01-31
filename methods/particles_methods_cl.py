@@ -222,7 +222,7 @@ class ParticleMethodsCL(GenericMethodsCL):
         self._push_xyz_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
         self.flag_sorted = False
 
-    def index_sort(self, grid):
+    def index_sort(self, grid, Ndump):
         WGS, WGS_tot = self.get_wgs(self.Args['Np'])
 
         self.DataDev['indx_in_cell'] = self.dev_arr(dtype=np.uint32,
@@ -232,13 +232,14 @@ class ParticleMethodsCL(GenericMethodsCL):
             dtype=np.uint32, shape=grid.Args['Nxm1Nrm1']+1,
             allocator=self.DataDev['sum_in_cell_mp'])
 
-        part_strs =  ['x', 'y', 'z', 'sum_in_cell', 'Np']
+        part_strs =  ['x', 'y', 'z', 'sum_in_cell', 'indx_in_cell', 'Np']
         grid_strs =  ['Nx', 'Xmin', 'dx_inv',
                       'Nr', 'Rmin', 'dr_inv']
 
         args = [self.DataDev[arg].data for arg in part_strs] + \
-               [self.DataDev['indx_in_cell'].data, ] + \
+               [np.int32(Ndump), ] + \
                [grid.DataDev[arg].data for arg in grid_strs]
+
 
         self._index_and_sum_knl(self.queue, (WGS_tot, ), (WGS, ), *args).wait()
 

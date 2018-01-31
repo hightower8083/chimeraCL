@@ -57,13 +57,13 @@ ${init_scl})
 
     // apply offset whithin a 4cell
     if (cell_offset==1)
-      {ix += 1;}
+      {ix += 1U;}
     else if (cell_offset==2)
-      {ir += 1;}
+      {ir += 1U;}
     else if (cell_offset==3)
-      {ix += 1;ir += 1;}
+      {ix += 1U;ir += 1U;}
 
-if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 ){
+if (ix>0 && ix<Nx_cell-1U && ir<Nr_cell-1U ){
     // get 1D indicies of the selected
     // cell and grid node on the global grid
     uint i_cell_glob = ix + ir*Nx_cell;
@@ -71,7 +71,7 @@ if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 ){
 
     // get particles indicies in the selected cell
     uint ip_start = indx_offset[i_cell_glob];
-    uint ip_end = indx_offset[i_cell_glob+1];
+    uint ip_end = indx_offset[i_cell_glob+1U];
 
     // skip empty cells
 if (ip_start != ip_end){
@@ -194,27 +194,27 @@ ${init_vec})
    {
     // get cell number and period of 4cell-grid
     uint Nx_grid = *Nx;
-    uint Nx_cell = Nx_grid-1;
-    uint Nx_2 = Nx_grid/2;
-    uint Nr_cell = *Nr-1;
+    uint Nx_cell = Nx_grid-1U;
+    uint Nx_2 = Nx_grid/2U;
+    uint Nr_cell = *Nr-1U;
 
     // get indicies of 4cell origin (left-bottom)
     uint ir = i_cell/Nx_2;
     uint ix = i_cell - ir*Nx_2;
 
     // convert 4cell indicies to global grid
-    ix *= 2;
-    ir *= 2;
+    ix *= 2U;
+    ir *= 2U;
 
     // apply offset whithin a 4cell
     if (cell_offset==1)
-      {ix += 1;}
+      {ix += 1U;}
     else if (cell_offset==2)
-      {ir += 1;}
+      {ir += 1U;}
     else if (cell_offset==3)
-      {ix += 1;ir += 1;}
+      {ix += 1U; ir += 1U;}
 
-if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 ){
+if (ix>0 && ix<Nx_cell-1U && ir<Nr_cell-1U ){
 
     // get 1D indicies of the selected
     // cell and grid node on the global grid
@@ -269,7 +269,7 @@ ${init_exp}
 
       rp = sqrt(yp*yp + zp*zp);
 
-      rp_inv = 0;
+      rp_inv = 0.;
       if (rp>0){rp_inv = 1./rp;}
 
 ${exp_compute_dep}
@@ -368,8 +368,8 @@ ${init_eb})
 
 if (ix>0 && ix<Nx_cell-1 && ir<Nr_cell-1 ){
 
-    uint i_cell = ix + ir*Nx_cell;
-    uint i_grid = ix + ir*Nx_grid;
+    uint i_cell = (uint) (ix + ir*Nx_cell);
+    uint i_grid = (uint) (ix + ir*Nx_grid);
 
     double u_p[3] = {px[ip_srtd], py[ip_srtd], pz[ip_srtd]};
     double dt_2 = 0.5*(*dt);

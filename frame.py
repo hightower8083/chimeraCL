@@ -14,6 +14,9 @@ class Frame():
         if 'Velocity' not in self.Args:
             self.Args['Velocity'] = 0.
 
+        if 'Ndump' not in self.Args:
+            self.Args['Ndump'] = 0
+
         if 'dt' not in self.Args:
             self.Args['dt'] = 1
         if 'DensityProfiles' not in self.Args:
@@ -55,7 +58,7 @@ class Frame():
 
         for specie in species:
             specie.free_added()
-            specie.sort_parts(grid=grid)
+            specie.sort_parts(grid=grid, Ndump=self.Args['Ndump'])
             specie.align_parts()
 
             Num_ppc = np.int32(np.prod(specie.Args['Nppc'])+1)
