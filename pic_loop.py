@@ -65,6 +65,12 @@ class PIC_loop:
                 frame.shift_grids(grids=self.solvers)
                 frame.inject_plasma(species=self.species, grid=self.mainsolver)
 
+                for solver in self.solvers:
+                    solver.depose_charge(species=self.species)
+                    solver.fb_transform(scals=['rho', ], dir=0)
+                    solver.fields_smooth(flds=['rho', ])
+                    solver.field_grad('rho','dN1')
+
         self.timer_record('frame')
 
         for parts in self.species:
@@ -115,15 +121,14 @@ class PIC_loop:
             solver.field_grad('rho','dN1')
             self.timer_record('grad')
 
-#            self.timer_start()
-#            solver.correct_current()
-#            self.timer_record('correctJ')
+            self.timer_start()
+            solver.correct_current()
+            self.timer_record('correctJ')
 
             self.timer_start()
             solver.push_fields()
             self.timer_record('push-eb')
 
-            """
             #### DAMP VERSION 1
             self.timer_start()
             solver.restore_B_fb()
@@ -133,8 +138,8 @@ class PIC_loop:
             solver.restore_G_fb()
             self.timer_record('damp-eb')
             # END VERSION 1
-            """
 
+            """
             #### DAMP VERSION 0
             self.timer_start()
             solver.damp_fields()
@@ -143,8 +148,8 @@ class PIC_loop:
             self.timer_start()
             solver.restore_B_fb()
             self.timer_record('restore_B')
-            err = solver.check_divB()
             # END VERSION 0
+            """
 
             self.timer_start()
             solver.fb_transform(vects=['E', 'B'], dir=1)
@@ -158,4 +163,3 @@ class PIC_loop:
             parts.free_mp()
 
         self.it +=1
-        return err
