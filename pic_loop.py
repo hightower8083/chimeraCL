@@ -68,11 +68,12 @@ class PIC_loop:
                 frame.shift_grids(grids=self.solvers)
                 frame.inject_plasma(species=self.species, grid=self.mainsolver)
 
-                for solver in self.solvers:
-                    solver.depose_charge(species=self.species)
-                    solver.fb_transform(scals=['rho', ], dir=0)
-                    solver.fields_smooth(flds=['rho', ])
-                    solver.field_grad('rho','dN1')
+                if self.correct_currents:
+                    for solver in self.solvers:
+                        solver.depose_charge(species=self.species)
+                        solver.fb_transform(scals=['rho', ], dir=0)
+                        solver.fields_smooth(flds=['rho', ])
+                        solver.field_grad('rho','dN1')
 
         self.timer_record('frame')
 
