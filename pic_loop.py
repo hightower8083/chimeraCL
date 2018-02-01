@@ -29,12 +29,15 @@ def timer_plot(Timer):
 
 class PIC_loop:
     def __init__(self, solvers=[], species=[],
-                 frames=[], diags=[], timit=False):
+                 frames=[], diags=[], timit=False,
+                 correct_currents=True):
+
         self.solvers = solvers
         self.mainsolver = self.solvers[0]
         self.species = species
         self.frames = frames
         self.diags = diags
+        self.correct_currents = correct_currents
 
         self.timit = timit
         self.it = 0
@@ -121,14 +124,16 @@ class PIC_loop:
             solver.field_grad('rho','dN1')
             self.timer_record('grad')
 
-            self.timer_start()
-            solver.correct_current()
-            self.timer_record('correctJ')
+            if self.correct_currents:
+                self.timer_start()
+                solver.correct_current()
+                self.timer_record('correctJ')
 
             self.timer_start()
             solver.push_fields()
             self.timer_record('push-eb')
 
+            """
             #### DAMP VERSION 1
             self.timer_start()
             solver.restore_B_fb()
@@ -138,8 +143,8 @@ class PIC_loop:
             solver.restore_G_fb()
             self.timer_record('damp-eb')
             # END VERSION 1
-
             """
+
             #### DAMP VERSION 0
             self.timer_start()
             solver.damp_fields()
@@ -149,7 +154,6 @@ class PIC_loop:
             solver.restore_B_fb()
             self.timer_record('restore_B')
             # END VERSION 0
-            """
 
             self.timer_start()
             solver.fb_transform(vects=['E', 'B'], dir=1)

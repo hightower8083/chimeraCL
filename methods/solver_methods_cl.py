@@ -64,6 +64,9 @@ class SolverMethodsCL(GenericMethodsCL):
     def profile_edges(self, flds):
         WGS, WGS_tot = self.get_wgs(self.Args['NxNr'])
 
+        if 'DampCells' not in self.Args:
+            return
+
         for fld in flds:
             for comp in self.Args['vec_comps']:
                 for m in range(self.Args['M']+1):

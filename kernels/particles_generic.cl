@@ -115,12 +115,12 @@ __kernel void index_and_sum_in_cell(
 
     if (ix > Ndump && ix < Nx_loc-1 && ir < Nr_loc-1 && ir>=0)
      {
-      indx_in_cell[ip] = uint (ix + ir * Nx_loc);
+      indx_in_cell[ip] = (uint) (ix + ir * Nx_loc);
       atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);
      }
     else
      {
-      indx_in_cell[ip] = uint (Nr_loc*Nx_loc) ;
+      indx_in_cell[ip] = (uint) (Nr_loc*Nx_loc) ;
       atom_add(&sum_in_cell[indx_in_cell[ip]], 1U);
      }
   }

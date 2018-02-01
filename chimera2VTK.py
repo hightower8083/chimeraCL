@@ -43,7 +43,7 @@ if len(sys.argv)>2:
 else:
     selection = None
 
-Nt = 25
+Nt = 5
 Theta = 2*np.pi / (Nt-1) * np.arange(Nt)
 
 @jit
