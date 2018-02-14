@@ -30,14 +30,14 @@ def timer_plot(Timer):
 class PIC_loop:
     def __init__(self, solvers=[], species=[],
                  frames=[], diags=[], timit=False,
-                 correct_currents=True):
+                 correct_current=True):
 
         self.solvers = solvers
         self.mainsolver = self.solvers[0]
         self.species = species
         self.frames = frames
         self.diags = diags
-        self.correct_currents = correct_currents
+        self.correct_current = correct_current
 
         self.timit = timit
         self.it = 0
@@ -68,7 +68,7 @@ class PIC_loop:
                 frame.shift_grids(grids=self.solvers)
                 frame.inject_plasma(species=self.species, grid=self.mainsolver)
 
-                if self.correct_currents:
+                if self.correct_current:
                     for solver in self.solvers:
                         solver.depose_charge(species=self.species)
                         solver.fb_transform(scals=['rho', ], dir=0)
@@ -125,7 +125,7 @@ class PIC_loop:
             solver.field_grad('rho','dN1')
             self.timer_record('grad')
 
-            if self.correct_currents:
+            if self.correct_current:
                 self.timer_start()
                 solver.correct_current()
                 self.timer_record('correctJ')
