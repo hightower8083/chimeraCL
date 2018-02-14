@@ -17,32 +17,32 @@ from chimeraCL.pic_loop import PIC_loop
 ########################################
 
 # Simulation steps
-Nsteps = 8000
+Nsteps = 12000
 
 # Diagnostics
 diag_in = {'Interval': 1000,
            'ScalarFields': ['rho', 'Ez'], }
 
-# Grid
-xmin, xmax = -43., 43.
-rmin, rmax = 0., 36.
-Nx, Nr, M = 900, 90, 1
-
 # Laser
-a0 = 3
-Lx, w0 = 10., 12.
-x0, x_foc = 0., 100.
+a0 = 3.6
+Lx, w0 = 7., 8.846
+x0, x_foc = 0., 300.
+
+# Grid
+xmin, xmax = -40., 26.
+rmin, rmax = 0., 36.
+Nx, Nr, M = 1536, 96, 1
 
 # Plasma
-dens = 7e18 / (1.1e21/0.8**2)
+dens = 1e19 / (1.1e21/0.8**2)
 Npx, Npr, Npth = 2, 2, 4
 
 # Frame (maganes plasma injection at right boundary)
 frame_velocity = 1.
 frameSteps = 20
 dens_profiles = [{'coord': 'x',
-                  'points': [-100, 43.1, 90, 5e5],
-                  'values': [   0,    0,  1,    1]}, ]
+                  'points': [-100, 30, 80, 5e5],
+                  'values': [   0,  0,  1,  1]}, ]
 
 ####################################################################
 ### SIMULATION CONSTRUCTOR (don't touch without asking me first) ###
@@ -83,6 +83,7 @@ ions.Args['InjectorSource'] = eons
 frame_in = {'Velocity': frame_velocity,
             'dt': solver.Args['dt'],
             'Steps': frameSteps,
+            'DampCells': 50,
             'DensityProfiles': dens_profiles
            }
 

@@ -97,8 +97,9 @@ def add_vtk_scalar(sgrid, scl, scl_name):
 
 if comm.rank==0:
     if os.path.exists('vtk'):
-        for fl in os.listdir('vtk'):
-            os.remove('./vtk/'+fl)
+        if selection != 'latest':
+            for fl in os.listdir('vtk'):
+                os.remove('./vtk/'+fl)
     else:
         os.mkdir('./vtk/')
 
