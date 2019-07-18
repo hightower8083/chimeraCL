@@ -1,0 +1,6 @@
+numpy
+scipy
+mako
+pyopencl
+reikna
+h5py

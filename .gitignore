@@ -1,0 +1,14 @@
+*.DS_Store
+__pycache__/
+*.pyc
+chimeraCL/*.DS_Store
+chimeraCL/__pycache__
+chimeraCL/*.pyc
+
+.ipynb_checkpoints/
+examples/.ipynb_checkpoints/
+build/
+dist/
+chimeraCL.egg-info/
+.cache/
+.eggs/
